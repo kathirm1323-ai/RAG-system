@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System - Advanced</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d4af37; /* Gold */
+            --primary-hover: #f1c40f; 
+            --secondary: #b8860b; /* Dark Goldenrod */
+            --bg-color: #050505; /* Deep Black */
+            --glass-bg: rgba(212, 175, 55, 0.04); /* Subtle Gold Glass */
+            --glass-border: rgba(212, 175, 55, 0.15); /* Gold outline */
+            --text-main: #ffffff;
+            --text-muted: #a39b83; /* Golden grey */
+            --sidebar-bg: rgba(10, 10, 10, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(184, 134, 11, 0.05) 0%, transparent 50%);
+            overflow: hidden;
+        }
+
+        /* Sidebar: Upload & History */
+        .sidebar {
+            width: 350px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            z-index: 10;
+        }
+
+        .brand {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .brand h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(135deg, #f9f295, #e0aa3e, #e0aa3e, #f9f295);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .brand p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 1px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--glass-bg);
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+        
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        /* History List */
+        .history-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding-right: 5px;
+            min-height: 0;
+        }
+        
+        .history-container::-webkit-scrollbar { width: 4px; }
+        .history-container::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 10px; }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .history-content {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            padding-right: 25px; /* Space for delete btn */
+            color: var(--text-muted);
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+            background: rgba(212, 175, 55, 0.08);
+            transform: translateX(4px);
+        }
+        
+        .history-item:hover .history-content {
+            color: white;
+        }
+
+        .history-item strong {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .delete-item-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(231, 76, 60, 0.1);
+            color: #ff5e57;
+            border-radius: 6px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid rgba(231, 76, 60, 0.2);
+            z-index: 10;
+        }
+
+        .history-item:hover .delete-item-btn {
+            opacity: 1;
+        }
+
+        .delete-item-btn:hover {
+            background: #e74c3c;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* Main Chat Area */
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-thumb { background-color: rgba(212,175,55,0.3); border-radius: 10px; }
+
+        .message {
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            max-width: 75%;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            animation: fadeIn 0.4s ease-out;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .msg-user {
+            background: linear-gradient(135deg, #111, #1a1a1a);
+            border: 1px solid var(--glass-border);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-ai {
+            background: linear-gradient(135deg, rgba(212,175,55,0.05), rgba(184,134,11,0.05));
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .msg-ai::before {
+            content: "AI";
+            position: absolute;
+            top: -12px;
+            left: 10px;
+            background: var(--primary);
+            color: black;
+            font-size: 0.65rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        @keyframes highlightMessage {
+            0% { background: rgba(212, 175, 55, 0.2); transform: scale(1.02); }
+            100% { background: transparent; transform: scale(1); }
+        }
+
+        .message.highlight-flash {
+            animation: highlightMessage 1.5s ease-out;
+            border-color: var(--primary) !important;
+        }
+
+        div.input-group {
+            display: flex;
+            gap: 1rem;
+            background: rgba(15,15,15,0.9);
+            padding: 0.75rem;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255,255,255,0.2);
+        }
+
+        button.send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: black;
+            border: none;
+            border-radius: 12px;
+            padding: 0 2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+
+        button.send-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+            background: linear-gradient(135deg, var(--primary-hover), var(--primary));
+        }
+        
+        button.send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #333;
+            color: #888;
+            box-shadow: none;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            transform: translateX(200%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        .toast.error {
+            border-color: #e74c3c;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Layout -->
+    <aside class="sidebar">
+        <div class="brand">
+            <h1>RAG System</h1>
+            <p>Executive Intelligence</p>
+        </div>
+
+        <div class="section-title">Knowledge Base</div>
+        <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="upload-icon">✦</div>
+            <div id="upload-text" style="font-size: 0.9rem; color: var(--text-muted);">Drop PDF to Index</div>
+            <div class="loader" id="upload-loader"></div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf" aria-label="File Upload">
+
+        <div class="section-title" style="justify-content: space-between;">
+            <span>Query History</span>
+            <button id="clear-btn" style="background: transparent; color: #a39b83; border: 1px solid #a39b83; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;">CLEAR</button>
+        </div>
+        <div class="history-container" id="history-box">
+            <div class="history-item" style="text-align: center; border: none; background: transparent;">
+                <em>Upload a document to begin tracking logic.</em>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Workspace -->
+    <main class="main-chat">
+        <div class="chat-container" id="chat-box">
+            <div class="message msg-ai">Greetings! I am the RAG System Executive AI. Securely upload a PDF module via the sidebar to initiate analysis.</div>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="query-input" placeholder="Awaiting document index..." autocomplete="off" disabled>
+            <button class="send-btn" id="send-btn" disabled>SEND</button>
+        </div>
+    </main>
+
+    <div class="toast" id="toast">Message here</div>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadText = document.getElementById('upload-text');
+        const uploadLoader = document.getElementById('upload-loader');
+        
+        const chatBox = document.getElementById('chat-box');
+        const queryInput = document.getElementById('query-input');
+        const sendBtn = document.getElementById('send-btn');
+        const toast = document.getElementById('toast');
+        const historyBox = document.getElementById('history-box');
+
+        let isReady = false;
+
+        // UI Helpers
+        function showToast(msg, isError=false) {
+            toast.textContent = msg;
+            toast.className = `toast show ${isError ? 'error' : ''}`;
+            setTimeout(() => toast.className = 'toast', 4000);
+        }
+
+        function appendMessage(sender, text, id = null) {
+            const div = document.createElement('div');
+            div.className = `message ${sender === 'user' ? 'msg-user' : 'msg-ai'}`;
+            if (id) div.id = id;
+            div.innerHTML = text.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+            chatBox.appendChild(div);
+            setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 50);
+            return div;
+        }
+
+        function appendHistoryItem(query, snippet, index) {
+            // Remove placeholder if it exists
+            const placeholder = historyBox.querySelector('em');
+            if (placeholder && placeholder.parentElement.classList.contains('history-item')) {
+                historyBox.innerHTML = '';
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.setAttribute('data-index', index);
+            div.innerHTML = `
+                <button class="delete-item-btn" title="Delete entry" onclick="event.stopPropagation(); deleteHistoryItem(${index}, this.parentElement)">×</button>
+                <div class="history-content">
+                    <strong>> ${query}</strong> ${snippet}
+                </div>
+            `;
+            
+            div.onclick = () => {
+                const targetId = `msg-pair-${index}`;
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.classList.remove('highlight-flash');
+                    void targetElement.offsetWidth; // Trigger reflow
+                    targetElement.classList.add('highlight-flash');
+                    showToast("Sourcing historical records...");
+                } else {
+                    showToast("Message trace not found in current buffer.", true);
+                }
+            };
+            
+            historyBox.insertBefore(div, historyBox.firstChild);
+        }
+
+        async function deleteHistoryItem(pairIndex, element) {
+            if (!confirm("Remove this entry from history?")) return;
+            
+            try {
+                const response = await fetch(`/delete_history_item/${pairIndex}`, { method: 'POST' });
+                if (response.ok) {
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                         fetchHistory(); // Re-fetch to sync indices
+                        showToast("Entry removed.");
+                    }, 300);
+                } else {
+                    showToast("Failed to delete entry.", true);
+                }
+            } catch (e) {
+                showToast("Network error.", true);
+            }
+        }
+
+        async function fetchHistory() {
+             try {
+                 const response = await fetch('/history');
+                 const data = await response.json();
+                 if(data.history) {
+                     historyBox.innerHTML = '';
+                     chatBox.innerHTML = '<div class="message msg-ai">History buffer synchronized. Ready for cross-reference.</div>';
+                     
+                     // Data history is flat: [U0, A0, U1, A1, ...]
+                     for(let i=0; i<data.history.length; i+=2) {
+                         if(data.history[i] && data.history[i+1]) {
+                             const pairIndex = i/2;
+                             const userText = data.history[i].content;
+                             const aiText = data.history[i+1].content;
+                             
+                             appendHistoryItem(userText, aiText, pairIndex);
+                             // Append to main chat with unique ID for the pair (ID on user message)
+                             appendMessage('user', userText, `msg-pair-${pairIndex}`);
+                             appendMessage('ai', aiText);
+                         }
+                     }
+                     if (data.history.length === 0) {
+                         historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>Upload a document to begin tracking logic.</em></div>';
+                         chatBox.innerHTML = '<div class="message msg-ai">Greetings! I am the RAG System Executive AI. Securely upload a PDF module via the sidebar to initiate analysis.</div>';
+                     } else {
+                         setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
+                     }
+                 }
+             } catch(e) {
+                 console.log("History fetch failed", e);
+             }
+        }
+
+        // Upload Logic
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if(file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                showToast("Please upload a valid PDF file.", true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            uploadText.style.display = 'none';
+            uploadLoader.style.display = 'block';
+
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if(response.ok) {
+                    showToast(data.message);
+                    isReady = true;
+                    queryInput.disabled = false;
+                    sendBtn.disabled = false;
+                    queryInput.placeholder = "Enter your query...";
+                    queryInput.focus();
+                    chatBox.innerHTML = ''; // Clear chat on new file
+                    historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History tracking started.</em></div>';
+                    appendMessage('ai', `Document **${file.name}** successfully indexed. Ready for analysis.`);
+                } else {
+                    showToast(data.error || "Upload failed", true);
+                }
+            } catch(e) {
+                showToast("Network error occurred", true);
+            } finally {
+                uploadText.style.display = 'block';
+                uploadLoader.style.display = 'none';
+                uploadText.textContent = "Drop another PDF to replace";
+            }
+        }
+
+        // Chat Logic
+        async function sendMessage() {
+            if(!isReady) return;
+            const text = queryInput.value.trim();
+            if(!text) return;
+
+            appendMessage('user', text);
+            queryInput.value = '';
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'message msg-ai';
+            thinkingDiv.id = 'thinking-msg';
+            thinkingDiv.innerHTML = '<span style="opacity:0.5; font-style:italic;">Processing query matrices...</span>';
+            chatBox.appendChild(thinkingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question: text})
+                });
+                const data = await response.json();
+                
+                const th = document.getElementById('thinking-msg');
+                if(th) th.remove();
+                
+                if(response.ok) {
+                    const pairCount = historyBox.querySelectorAll('.history-item:not([style*="background: transparent"])').length;
+                    appendMessage('ai', data.answer);
+                    appendMessage('user', text, `msg-pair-${pairCount}`); // Add tag to the next user message
+                    appendHistoryItem(text, data.answer, pairCount); 
+                } else {
+                    appendMessage('ai', "⚠️ Error: " + (data.error || "Could not generate answer"));
+                }
+            } catch(e) {
+                const th = document.getElementById('thinking-msg');
+                if(th) th.remove();
+                appendMessage('ai', "⚠️ Critical Error: Unreachable neural host.");
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        queryInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') sendMessage();
+        });
+
+        const clearBtn = document.getElementById('clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async () => {
+                try {
+                    await fetch('/clear_history', { method: 'POST' });
+                    historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared.</em></div>';
+                    showToast("History cleared successfully!");
+                } catch(e) {
+                    showToast("Failed to clear history.", true);
+                }
+            });
+        }
+
+        // Initialize history and check server status
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                if (data.ready) {
+                    isReady = true;
+                    queryInput.disabled = false;
+                    sendBtn.disabled = false;
+                    queryInput.placeholder = "Enter your query...";
+                }
+                fetchHistory(); // Fetch after setting isReady
+            } catch (e) {
+                console.log("Status check failed", e);
+                fetchHistory();
+            }
+        });
+
+    </script>
+</body>
+</html>

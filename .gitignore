@@ -1,0 +1,11 @@
+__pycache__/
+*.whl
+*.tar.gz
+uploads/
+.env
+.idea/
+.vscode/
+
+# Ignore Python specific files
+*.py[cod]
+*$py.class
