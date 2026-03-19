@@ -451,6 +451,7 @@
         const sendBtn = document.getElementById('send-btn');
         const toast = document.getElementById('toast');
         const historyBox = document.getElementById('history-box');
+        let interactionCount = 0;
 
         let isReady = true; // In demo mode, we're always ready!
 
@@ -489,9 +490,17 @@
             `;
             
             div.onclick = () => {
-                showToast("Sourcing historical records...");
-                // In demo mode, we just scroll to top for feedback
-                chatBox.scrollTop = 0;
+                const targetId = `msg-pair-${index}`;
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.classList.remove('highlight-flash');
+                    void targetElement.offsetWidth;
+                    targetElement.classList.add('highlight-flash');
+                    showToast("Sourcing historical records...");
+                } else {
+                    showToast("Message trace not found in current buffer.", true);
+                }
             };
             
             historyBox.insertBefore(div, historyBox.firstChild);
@@ -548,7 +557,8 @@
             const text = queryInput.value.trim();
             if(!text) return;
 
-            appendMessage('user', text);
+            const pairIndex = interactionCount++;
+            appendMessage('user', text, `msg-pair-${pairIndex}`);
             queryInput.value = '';
             
             const thinkingDiv = document.createElement('div');
@@ -565,8 +575,7 @@
                 const answer = getMockAnswer(text);
                 appendMessage('ai', answer);
                 
-                const index = historyBox.querySelectorAll('.history-item').length;
-                appendHistoryItem(text, answer, index);
+                appendHistoryItem(text, answer, pairIndex);
             }, 1000);
         }
 
@@ -577,13 +586,15 @@
 
         document.getElementById('clear-btn').addEventListener('click', () => {
             historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared.</em></div>';
+            interactionCount = 0;
             showToast("Demo history cleared.");
         });
 
         // Initialize with some demo data
         window.addEventListener('load', () => {
             setTimeout(() => {
-                appendHistoryItem("System Overview", "The Executive Intelligence RAG system offers premium document analysis.", 100);
+                const initIndex = interactionCount++;
+                appendHistoryItem("System Overview", "The Executive Intelligence RAG system offers premium document analysis.", initIndex);
             }, 500);
         });
 

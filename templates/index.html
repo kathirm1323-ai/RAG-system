@@ -432,6 +432,7 @@
         const historyBox = document.getElementById('history-box');
 
         let isReady = false;
+        let interactionCount = 0;
 
         // UI Helpers
         function showToast(msg, isError=false) {
@@ -471,10 +472,14 @@
                 const targetId = `msg-pair-${index}`;
                 const targetElement = document.getElementById(targetId);
                 if (targetElement) {
+                    // Ensure the container is what we scroll
                     targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Add a visual highlight effect
                     targetElement.classList.remove('highlight-flash');
-                    void targetElement.offsetWidth; // Trigger reflow
+                    void targetElement.offsetWidth; // Trigger reflow for animation
                     targetElement.classList.add('highlight-flash');
+                    
                     showToast("Sourcing historical records...");
                 } else {
                     showToast("Message trace not found in current buffer.", true);
@@ -512,10 +517,11 @@
                      historyBox.innerHTML = '';
                      chatBox.innerHTML = '<div class="message msg-ai">History buffer synchronized. Ready for cross-reference.</div>';
                      
+                     interactionCount = 0;
                      // Data history is flat: [U0, A0, U1, A1, ...]
                      for(let i=0; i<data.history.length; i+=2) {
                          if(data.history[i] && data.history[i+1]) {
-                             const pairIndex = i/2;
+                             const pairIndex = interactionCount++;
                              const userText = data.history[i].content;
                              const aiText = data.history[i+1].content;
                              
@@ -593,7 +599,11 @@
             const text = queryInput.value.trim();
             if(!text) return;
 
-            appendMessage('user', text);
+            // Use and increment global counter immediately to prevent race conditions
+            const pairIndex = interactionCount++;
+
+            // Append user message with the ID immediately
+            appendMessage('user', text, `msg-pair-${pairIndex}`);
             queryInput.value = '';
             
             const thinkingDiv = document.createElement('div');
@@ -615,10 +625,8 @@
                 if(th) th.remove();
                 
                 if(response.ok) {
-                    const pairCount = historyBox.querySelectorAll('.history-item:not([style*="background: transparent"])').length;
                     appendMessage('ai', data.answer);
-                    appendMessage('user', text, `msg-pair-${pairCount}`); // Add tag to the next user message
-                    appendHistoryItem(text, data.answer, pairCount); 
+                    appendHistoryItem(text, data.answer, pairIndex); 
                 } else {
                     appendMessage('ai', "⚠️ Error: " + (data.error || "Could not generate answer"));
                 }
@@ -640,6 +648,7 @@
                 try {
                     await fetch('/clear_history', { method: 'POST' });
                     historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared.</em></div>';
+                    interactionCount = 0; // Reset counter
                     showToast("History cleared successfully!");
                 } catch(e) {
                     showToast("Failed to clear history.", true);
