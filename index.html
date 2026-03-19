@@ -625,6 +625,13 @@
             showToast(`Switched to: ${name}`);
         }
 
+        const MOCK_ANSWERS = {
+            "default": "The RAG System (Retrieval-Augmented Generation) uses vector embeddings to search through documents and provide context-aware answers. In a live environment, this would be connected to a Groq Llama 3.1 model.",
+            "hello": "Greetings! I am the RAG Executive Interface. How can I assist with your data analysis today?",
+            "who": "I am an AI assistant specialized in document intelligence, designed with a premium gold-and-black aesthetic for executive-level workflows.",
+            "features": "This interface features drag-and-drop indexing, real-time chat history, glassmorphism aesthetics, and persistent session logic."
+        };
+
         function getMockAnswer(q) {
             q = q.toLowerCase();
             if (q.includes("hello") || q.includes("hi")) return MOCK_ANSWERS.hello;

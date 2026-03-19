@@ -72,10 +72,18 @@ def generate_answer(query, context, history):
     for msg in history[-4:]: # include last 2 QA pairs
         history_text += f"{msg['role'].capitalize()}: {msg['content']}\n"
         
-    prompt = f"""You are a helpful assistant. Use ONLY the given Context below to answer the Question.
+    # Standard greeting detection
+    greetings = ["hello", "hi", "hey", "greetings", "helo", "heyo", "how are you"]
+    if query.lower() in greetings and not context:
+        return "Greetings! I am the RAG Executive Interface. I am ready to analyze your document data once context is provided. How can I assist you today?"
+
+    prompt = f"""You are a professional assistant. 
+1. Use ONLY the given Context below to answer the Question.
+2. If the context is empty or does not contain the answer, say "I cannot find information about this in the current module."
+3. Keep answers concise and professional.
     
 Context:
-{context_text}
+{context_text if context_text else "(No context available for this module yet)"}
 
 Past Conversation:
 {history_text}
@@ -83,12 +91,17 @@ Past Conversation:
 Question: {query}
 Answer:"""
 
+    print(f"DEBUG: Generating answer for query: '{query}'")
+    print(f"DEBUG: Context length: {len(context_text)}")
+    
     response = llm_client.chat.completions.create(
         model="llama-3.1-8b-instant", 
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1
     )
-    return response.choices[0].message.content
+    answer = response.choices[0].message.content
+    print(f"DEBUG: LLM Response: '{answer}'")
+    return answer
 
 @app.route('/')
 def index():
