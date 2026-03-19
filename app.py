@@ -27,7 +27,15 @@ def index():
 
 # Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-llm_client = Groq(api_key=GROQ_API_KEY)
+llm_client = None
+
+def get_llm_client():
+    global llm_client
+    if llm_client is None:
+        if not GROQ_API_KEY:
+             raise ValueError("GROQ_API_KEY is missing. Please set it in Environment Variables.")
+        llm_client = Groq(api_key=GROQ_API_KEY)
+    return llm_client
 # Global variables
 embedding_model = None
 
@@ -132,7 +140,8 @@ Answer:"""
     print(f"DEBUG: Generating answer for query: '{query}'")
     print(f"DEBUG: Context length: {len(context_text)}")
     
-    response = llm_client.chat.completions.create(
+    client = get_llm_client()
+    response = client.chat.completions.create(
         model="llama-3.1-8b-instant", 
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1
