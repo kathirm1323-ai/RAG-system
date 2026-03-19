@@ -19,7 +19,8 @@ llm_client = Groq(api_key=GROQ_API_KEY)
 print("Loading Embedding Model...")
 embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-chat_history = []
+chat_history = [] # For legacy/refactor
+global_history = [] # For conversation before any document is selected
 
 class SimpleVectorDB:
     def __init__(self):
@@ -67,20 +68,36 @@ def split_text_into_chunks(text, chunk_size=300, overlap=50):
 
 def generate_answer(query, context, history):
     context_text = "\n\n---\n\n".join(context)
-    # Include past chat history in prompt for better continuity if needed
+    
+    # Increase history buffer to last 10 messages (5 QA pairs)
     history_text = ""
-    for msg in history[-4:]: # include last 2 QA pairs
+    for msg in history[-10:]: 
         history_text += f"{msg['role'].capitalize()}: {msg['content']}\n"
         
-    # Standard greeting detection
-    greetings = ["hello", "hi", "hey", "greetings", "helo", "heyo", "how are you"]
-    if query.lower() in greetings and not context:
-        return "Greetings! I am the RAG Executive Interface. I am ready to analyze your document data once context is provided. How can I assist you today?"
+    # Enhanced greeting and identity detection
+    greetings = ["hello", "hi", "hey", "greetings", "helo", "heyo", "how are you", "what's up"]
+    lower_query = query.lower()
+    
+    # If it's a pure greeting/identity quest without context, handle it naturally
+    if not context and (any(g in lower_query for g in greetings) or "my name" in lower_query or "who am i" in lower_query):
+        prompt = f"""You are the RAG Executive AI. 
+1. The user may be introducing themselves or asking about their identity.
+2. Review the Past Conversation carefully. **PRIORITIZE the most recent name** shared by the user in the latest messages.
+3. If they just said "My name is X", that is their current name. Disregard any older or conflicting names from previous turns.
+4. If their name is known, address them directly (e.g., "Hello Kathir").
+5. If not known, be professional and ask how you can help with their documents.
 
-    prompt = f"""You are a professional assistant. 
-1. Use ONLY the given Context below to answer the Question.
-2. If the context is empty or does not contain the answer, say "I cannot find information about this in the current module."
-3. Keep answers concise and professional.
+Past Conversation:
+{history_text}
+
+New Message: {query}
+Answer:"""
+    else:
+        prompt = f"""You are a professional assistant. 
+1. Use the given Context below to answer the Question.
+2. Also check the Past Conversation for personal details like the user's name. **Always use the most recent name shared.**
+3. If the context is empty and the question isn't about the user's identity, say "I cannot find information about this in the current module."
+4. Keep answers concise and professional.
     
 Context:
 {context_text if context_text else "(No context available for this module yet)"}
@@ -147,8 +164,16 @@ def ask():
 
     if not query:
         return jsonify({"error": "No question provided"}), 400
-    if not filename or filename not in knowledge_base:
-        return jsonify({"error": "Please select a document first"}), 400
+        
+    if not filename:
+        # Conversation without a document context
+        answer = generate_answer(query, [], global_history)
+        global_history.append({"role": "user", "content": query})
+        global_history.append({"role": "assistant", "content": answer})
+        return jsonify({"answer": answer})
+
+    if filename not in knowledge_base:
+        return jsonify({"error": "Invalid document selection"}), 400
         
     ctx = knowledge_base[filename]
     relevant_chunks = ctx.db.search(query)
@@ -163,7 +188,7 @@ def ask():
 def get_history():
     filename = request.args.get('filename')
     if not filename or filename not in knowledge_base:
-        return jsonify({"history": []})
+        return jsonify({"history": global_history})
     return jsonify({"history": knowledge_base[filename].history})
 
 @app.route('/delete_history_item', methods=['POST'])

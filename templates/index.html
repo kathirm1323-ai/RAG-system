@@ -438,6 +438,10 @@
             <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); opacity: 0.5;">No modules indexed.</div>
         </div>
 
+        <a href="https://kathirm1323-ai.github.io/RAG-system/" target="_blank" class="clear-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); color: var(--primary); font-weight: 500; height: 32px; border-radius: 4px; font-size: 0.75rem; margin-top: 10px; transition: all 0.3s ease;">
+            VIEW STATIC DEMO
+        </a>
+
         <div class="section-title" style="justify-content: space-between;">
             <span>Query History</span>
             <button id="clear-btn" style="background: transparent; color: #a39b83; border: 1px solid #a39b83; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;">CLEAR</button>
@@ -684,14 +688,7 @@
             const text = queryInput.value.trim();
             if(!text) return;
 
-            if(!activeFilename) {
-                appendMessage('user', text);
-                queryInput.value = '';
-                appendMessage('ai', "I am ready to assist, but I need a knowledge base to work from. **Please upload a PDF** or **select an existing module** from the library on the left to begin our analysis.");
-                return;
-            }
-
-            // Use and increment global counter immediately to prevent race conditions
+            // Assign pair index immediately to prevent race conditions
             const pairIndex = interactionCount++;
 
             // Append user message with the ID immediately

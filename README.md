@@ -3,9 +3,9 @@
 ![RAG System Showcase](showcase.png)
 
 <div align="center">
-  <h3>✨ Live Interactive Demo ✨</h3>
+  <h3>✨ View Demo ✨</h3>
   <a href="https://kathirm1323-ai.github.io/RAG-system/">
-    <img src="https://img.shields.io/badge/View_Live_Demo-d4af37?style=for-the-badge&logoColor=black" alt="Live Demo">
+    <img src="https://img.shields.io/badge/View_Demo-d4af37?style=for-the-badge&logoColor=black" alt="View Demo">
   </a>
 </div>
 
