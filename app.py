@@ -17,11 +17,22 @@ os.makedirs('uploads', exist_ok=True)
 def health_check():
     return "OK", 200
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 llm_client = Groq(api_key=GROQ_API_KEY)
-print("Loading Embedding Model...")
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+# Global variables
+embedding_model = None
+
+def get_embedding_model():
+    global embedding_model
+    if embedding_model is None:
+        print("Loading Embedding Model...")
+        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    return embedding_model
 
 chat_history = [] # For legacy/refactor
 global_history = [] # For conversation before any document is selected
@@ -32,11 +43,13 @@ class SimpleVectorDB:
         self.embeddings = []
     def add_chunks(self, chunks):
         self.chunks = chunks
-        self.embeddings = embedding_model.encode(chunks)
+        model = get_embedding_model()
+        self.embeddings = model.encode(chunks)
     def search(self, query, top_k=3):
-        if len(self.embeddings) == 0:
+        if len(self.chunks) == 0:
             return []
-        query_embedding = embedding_model.encode([query])[0]
+        model = get_embedding_model()
+        query_embedding = model.encode([query])[0]
         similarities = []
         for i, chunk_emb in enumerate(self.embeddings):
             sim = np.dot(query_embedding, chunk_emb) / (np.linalg.norm(query_embedding) * np.linalg.norm(chunk_emb))
@@ -124,9 +137,7 @@ Answer:"""
     print(f"DEBUG: LLM Response: '{answer}'")
     return answer
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    return answer
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
