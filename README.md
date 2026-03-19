@@ -1,5 +1,16 @@
 # Advanced RAG System - Executive Intelligence
 
+![RAG System Showcase](showcase.png)
+
+<div align="center">
+  <h3>✨ Live Interactive Demo ✨</h3>
+  <a href="https://kathirm1323-ai.github.io/RAG-system/">
+    <img src="https://img.shields.io/badge/View_Live_Demo-d4af37?style=for-the-badge&logoColor=black" alt="Live Demo">
+  </a>
+</div>
+
+<br>
+
 A high-performance Retrieval-Augmented Generation (RAG) system with a premium, modern UI. This application allows you to index PDF documents and have intelligent conversations about their content.
 
 ## ✨ Features
