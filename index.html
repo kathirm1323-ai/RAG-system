@@ -230,6 +230,46 @@
             transform: scale(1.1);
         }
 
+        /* Library Section */
+        .library-container {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .library-item {
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+        }
+
+        .library-item:hover {
+            background: rgba(212, 175, 55, 0.05);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: white;
+        }
+
+        .library-item.active {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .library-item::before {
+            content: "📄";
+            font-size: 0.9rem;
+        }
+
         /* Main Chat Area */
         .main-chat {
             flex: 1;
@@ -414,13 +454,19 @@
         </div>
         <input type="file" id="file-input" accept=".pdf" aria-label="File Upload">
 
+        <div class="section-title">Module Library</div>
+        <div class="library-container" id="library-box">
+            <div class="library-item active" onclick="selectDemoModule('Food Guide', this)">Food Guide.pdf</div>
+            <div class="library-item" onclick="selectDemoModule('Resume Analysis', this)">Resume_Kathir.pdf</div>
+        </div>
+
         <div class="section-title" style="justify-content: space-between;">
             <span>Query History</span>
             <button id="clear-btn" style="background: transparent; color: #a39b83; border: 1px solid #a39b83; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;">CLEAR</button>
         </div>
         <div class="history-container" id="history-box">
             <div class="history-item" style="text-align: center; border: none; background: transparent;">
-                <em>Upload a document to begin tracking logic.</em>
+                <em>Select a module to view history.</em>
             </div>
         </div>
     </aside>
@@ -451,7 +497,9 @@
         const sendBtn = document.getElementById('send-btn');
         const toast = document.getElementById('toast');
         const historyBox = document.getElementById('history-box');
+        const libraryBox = document.getElementById('library-box');
         let interactionCount = 0;
+        let activeModule = "Food Guide";
 
         let isReady = true; // In demo mode, we're always ready!
 
@@ -538,12 +586,44 @@
         }
 
         // Chat Logic (MOCK)
-        const MOCK_ANSWERS = {
-            "default": "The RAG System (Retrieval-Augmented Generation) uses vector embeddings to search through documents and provide context-aware answers. In a live environment, this would be connected to a Groq Llama 3.1 model.",
-            "hello": "Greetings! I am the RAG Executive Interface. How can I assist with your data analysis today?",
-            "who": "I am an AI assistant specialized in document intelligence, designed with a premium gold-and-black aesthetic for executive-level workflows.",
-            "features": "This interface features drag-and-drop indexing, real-time chat history, glassmorphism aesthetics, and persistent session logic."
+        const MOCK_DATA = {
+            "Food Guide": {
+                history: [
+                    { q: "What is this file?", a: "This is a demonstration of the RAG System's food guide analysis." },
+                    { q: "Tell me about proteins", a: "Proteins are essential for body building and include foods like eggs, meat, and beans." }
+                ],
+                welcome: "Food Guide module loaded. Analyze nutritional data matrices now."
+            },
+            "Resume Analysis": {
+                history: [
+                    { q: "Who is this resume for?", a: "This is a professional profile for Kathir, an executive intelligence specialist." }
+                ],
+                welcome: "Resume Analysis module active. Ready for talent retrieval."
+            }
         };
+
+        function selectDemoModule(name, el) {
+            activeModule = name;
+            // Update active state
+            Array.from(libraryBox.children).forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            
+            // Clear and reload
+            chatBox.innerHTML = '';
+            historyBox.innerHTML = '';
+            interactionCount = 0;
+            
+            appendMessage('ai', MOCK_DATA[name].welcome);
+            
+            MOCK_DATA[name].history.forEach(item => {
+                const idx = interactionCount++;
+                appendMessage('user', item.q, `msg-pair-${idx}`);
+                appendMessage('ai', item.a);
+                appendHistoryItem(item.q, item.a, idx);
+            });
+            
+            showToast(`Switched to: ${name}`);
+        }
 
         function getMockAnswer(q) {
             q = q.toLowerCase();
@@ -556,6 +636,13 @@
         async function sendMessage() {
             const text = queryInput.value.trim();
             if(!text) return;
+
+            if(!activeModule) {
+                appendMessage('user', text);
+                queryInput.value = '';
+                appendMessage('ai', "Please select a module from the library or upload a document to initiate analysis.");
+                return;
+            }
 
             const pairIndex = interactionCount++;
             appendMessage('user', text, `msg-pair-${pairIndex}`);
@@ -587,15 +674,14 @@
         document.getElementById('clear-btn').addEventListener('click', () => {
             historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared.</em></div>';
             interactionCount = 0;
+            if (MOCK_DATA[activeModule]) MOCK_DATA[activeModule].history = [];
             showToast("Demo history cleared.");
         });
 
         // Initialize with some demo data
         window.addEventListener('load', () => {
-            setTimeout(() => {
-                const initIndex = interactionCount++;
-                appendHistoryItem("System Overview", "The Executive Intelligence RAG system offers premium document analysis.", initIndex);
-            }, 500);
+            const initialEl = libraryBox.querySelector('.active');
+            if (initialEl) selectDemoModule('Food Guide', initialEl);
         });
 
     </script>

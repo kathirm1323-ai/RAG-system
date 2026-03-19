@@ -210,6 +210,46 @@
             transform: scale(1.1);
         }
 
+        /* Library Section */
+        .library-container {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .library-item {
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+        }
+
+        .library-item:hover {
+            background: rgba(212, 175, 55, 0.05);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: white;
+        }
+
+        .library-item.active {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .library-item::before {
+            content: "📄";
+            font-size: 0.9rem;
+        }
+
         /* Main Chat Area */
         .main-chat {
             flex: 1;
@@ -393,13 +433,18 @@
         </div>
         <input type="file" id="file-input" accept=".pdf" aria-label="File Upload">
 
+        <div class="section-title">Module Library</div>
+        <div class="library-container" id="library-box">
+            <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); opacity: 0.5;">No modules indexed.</div>
+        </div>
+
         <div class="section-title" style="justify-content: space-between;">
             <span>Query History</span>
             <button id="clear-btn" style="background: transparent; color: #a39b83; border: 1px solid #a39b83; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;">CLEAR</button>
         </div>
         <div class="history-container" id="history-box">
             <div class="history-item" style="text-align: center; border: none; background: transparent;">
-                <em>Upload a document to begin tracking logic.</em>
+                <em>Select a module to view history.</em>
             </div>
         </div>
     </aside>
@@ -411,8 +456,8 @@
         </div>
         
         <div class="input-group">
-            <input type="text" id="query-input" placeholder="Awaiting document index..." autocomplete="off" disabled>
-            <button class="send-btn" id="send-btn" disabled>SEND</button>
+            <input type="text" id="query-input" placeholder="Upload a document to begin..." autocomplete="off">
+            <button class="send-btn" id="send-btn">SEND</button>
         </div>
     </main>
 
@@ -430,9 +475,11 @@
         const sendBtn = document.getElementById('send-btn');
         const toast = document.getElementById('toast');
         const historyBox = document.getElementById('history-box');
+        const libraryBox = document.getElementById('library-box');
 
         let isReady = false;
         let interactionCount = 0;
+        let activeFilename = null;
 
         // UI Helpers
         function showToast(msg, isError=false) {
@@ -491,14 +538,19 @@
 
         async function deleteHistoryItem(pairIndex, element) {
             if (!confirm("Remove this entry from history?")) return;
+            if (!activeFilename) return;
             
             try {
-                const response = await fetch(`/delete_history_item/${pairIndex}`, { method: 'POST' });
+                const response = await fetch(`/delete_history_item`, { 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ filename: activeFilename, pair_index: pairIndex })
+                });
                 if (response.ok) {
                     element.style.opacity = '0';
                     element.style.transform = 'translateX(-20px)';
                     setTimeout(() => {
-                         fetchHistory(); // Re-fetch to sync indices
+                         fetchHistory(activeFilename); // Re-fetch to sync indices
                         showToast("Entry removed.");
                     }, 300);
                 } else {
@@ -509,16 +561,16 @@
             }
         }
 
-        async function fetchHistory() {
+        async function fetchHistory(filename) {
+             if (!filename) return;
              try {
-                 const response = await fetch('/history');
+                 const response = await fetch(`/history?filename=${encodeURIComponent(filename)}`);
                  const data = await response.json();
                  if(data.history) {
                      historyBox.innerHTML = '';
-                     chatBox.innerHTML = '<div class="message msg-ai">History buffer synchronized. Ready for cross-reference.</div>';
+                     chatBox.innerHTML = `<div class="message msg-ai">Historical buffer for [${filename}] synchronized.</div>`;
                      
                      interactionCount = 0;
-                     // Data history is flat: [U0, A0, U1, A1, ...]
                      for(let i=0; i<data.history.length; i+=2) {
                          if(data.history[i] && data.history[i+1]) {
                              const pairIndex = interactionCount++;
@@ -526,14 +578,12 @@
                              const aiText = data.history[i+1].content;
                              
                              appendHistoryItem(userText, aiText, pairIndex);
-                             // Append to main chat with unique ID for the pair (ID on user message)
                              appendMessage('user', userText, `msg-pair-${pairIndex}`);
                              appendMessage('ai', aiText);
                          }
                      }
                      if (data.history.length === 0) {
-                         historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>Upload a document to begin tracking logic.</em></div>';
-                         chatBox.innerHTML = '<div class="message msg-ai">Greetings! I am the RAG System Executive AI. Securely upload a PDF module via the sidebar to initiate analysis.</div>';
+                         historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History tracking started for this module.</em></div>';
                      } else {
                          setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
                      }
@@ -541,6 +591,46 @@
              } catch(e) {
                  console.log("History fetch failed", e);
              }
+        }
+        
+        async function updateLibrary() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                if (data.documents && data.documents.length > 0) {
+                    libraryBox.innerHTML = '';
+                    data.documents.forEach(doc => {
+                        const div = document.createElement('div');
+                        div.className = `library-item ${doc.filename === activeFilename ? 'active' : ''}`;
+                        div.textContent = doc.filename;
+                        div.onclick = () => selectModule(doc.filename);
+                        libraryBox.appendChild(div);
+                    });
+                    
+                    // Auto-select first if none active
+                    if (!activeFilename) {
+                        selectModule(data.documents[0].filename);
+                    }
+                }
+            } catch (e) {
+                console.log("Library update failed", e);
+            }
+        }
+
+        function selectModule(filename) {
+            activeFilename = filename;
+            isReady = true;
+            queryInput.disabled = false;
+            sendBtn.disabled = false;
+            queryInput.placeholder = `Querying: ${filename}...`;
+            
+            // Update UI active state
+            Array.from(libraryBox.children).forEach(child => {
+                child.classList.toggle('active', child.textContent === filename);
+            });
+            
+            fetchHistory(filename);
+            showToast(`Switched to module: ${filename}`);
         }
 
         // Upload Logic
@@ -574,13 +664,9 @@
                 if(response.ok) {
                     showToast(data.message);
                     isReady = true;
-                    queryInput.disabled = false;
-                    sendBtn.disabled = false;
-                    queryInput.placeholder = "Enter your query...";
-                    queryInput.focus();
-                    chatBox.innerHTML = ''; // Clear chat on new file
-                    historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History tracking started.</em></div>';
-                    appendMessage('ai', `Document **${file.name}** successfully indexed. Ready for analysis.`);
+                    activeFilename = data.filename;
+                    updateLibrary();
+                    selectModule(data.filename);
                 } else {
                     showToast(data.error || "Upload failed", true);
                 }
@@ -595,9 +681,15 @@
 
         // Chat Logic
         async function sendMessage() {
-            if(!isReady) return;
             const text = queryInput.value.trim();
             if(!text) return;
+
+            if(!activeFilename) {
+                appendMessage('user', text);
+                queryInput.value = '';
+                appendMessage('ai', "I am ready to assist, but I need a knowledge base to work from. **Please upload a PDF** or **select an existing module** from the library on the left to begin our analysis.");
+                return;
+            }
 
             // Use and increment global counter immediately to prevent race conditions
             const pairIndex = interactionCount++;
@@ -617,7 +709,10 @@
                 const response = await fetch('/ask', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({question: text})
+                    body: JSON.stringify({
+                        question: text,
+                        filename: activeFilename
+                    })
                 });
                 const data = await response.json();
                 
@@ -645,9 +740,14 @@
         const clearBtn = document.getElementById('clear-btn');
         if (clearBtn) {
             clearBtn.addEventListener('click', async () => {
+                if (!activeFilename) return;
                 try {
-                    await fetch('/clear_history', { method: 'POST' });
-                    historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared.</em></div>';
+                    await fetch('/clear_history', { 
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ filename: activeFilename })
+                    });
+                    historyBox.innerHTML = '<div class="history-item" style="text-align: center; border: none; background: transparent;"><em>History cleared for this module.</em></div>';
                     interactionCount = 0; // Reset counter
                     showToast("History cleared successfully!");
                 } catch(e) {
@@ -659,18 +759,9 @@
         // Initialize history and check server status
         window.addEventListener('load', async () => {
             try {
-                const response = await fetch('/status');
-                const data = await response.json();
-                if (data.ready) {
-                    isReady = true;
-                    queryInput.disabled = false;
-                    sendBtn.disabled = false;
-                    queryInput.placeholder = "Enter your query...";
-                }
-                fetchHistory(); // Fetch after setting isReady
+                await updateLibrary();
             } catch (e) {
                 console.log("Status check failed", e);
-                fetchHistory();
             }
         });
 
