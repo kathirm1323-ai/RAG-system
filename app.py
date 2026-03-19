@@ -9,9 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs('uploads', exist_ok=True)
+
+@app.route('/health')
+def health_check():
+    return "OK", 200
 
 # Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
