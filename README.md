@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://kathirm1323-ai.github.io/RAG-system/">
-    <img src="https://img.shields.io/badge/RAG%20System-181717?style=flat-square" alt="RAG System">
+    <img src="https://img.shields.io/badge/RAG%20System-d4af37?style=flat-square" alt="RAG System">
   </a>
 </div>
 
