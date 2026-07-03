@@ -1,4 +1,5 @@
 import os
+import uuid
 import numpy as np
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
@@ -6,6 +7,8 @@ from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 from dotenv import load_dotenv
+import chromadb
+from chromadb.utils import embedding_functions
 
 load_dotenv()
 
@@ -17,27 +20,34 @@ os.makedirs('uploads', exist_ok=True)
 os.environ['TRANSFORMERS_CACHE'] = '/tmp'
 os.environ['SENTENCE_TRANSFORMERS_HOME'] = '/tmp'
 
+
 @app.route('/health')
 def health_check():
     return "OK", 200
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 # Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 llm_client = None
+
 
 def get_llm_client():
     global llm_client
     if llm_client is None:
         if not GROQ_API_KEY:
-             raise ValueError("GROQ_API_KEY is missing. Please set it in Environment Variables.")
+            raise ValueError("GROQ_API_KEY is missing. Please set it in Environment Variables.")
         llm_client = Groq(api_key=GROQ_API_KEY)
     return llm_client
+
+
 # Global variables
 embedding_model = None
+
 
 def get_embedding_model():
     global embedding_model
@@ -46,40 +56,90 @@ def get_embedding_model():
         embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     return embedding_model
 
-chat_history = [] # For legacy/refactor
-global_history = [] # For conversation before any document is selected
 
-class SimpleVectorDB:
-    def __init__(self):
-        self.chunks = []
-        self.embeddings = []
-    def add_chunks(self, chunks):
-        self.chunks = chunks
-        model = get_embedding_model()
-        self.embeddings = model.encode(chunks)
-    def search(self, query, top_k=3):
-        if len(self.chunks) == 0:
+# =====================================================================
+# ChromaDB-backed Vector Database with source metadata
+# =====================================================================
+chroma_client = chromadb.Client()  # In-memory ChromaDB
+
+sentence_transformer_ef = None
+
+
+def get_chroma_ef():
+    global sentence_transformer_ef
+    if sentence_transformer_ef is None:
+        sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
+    return sentence_transformer_ef
+
+
+class ChromaVectorDB:
+    """Vector database backed by ChromaDB with source file metadata."""
+
+    def __init__(self, collection_name=None):
+        if collection_name is None:
+            collection_name = f"collection_{uuid.uuid4().hex[:8]}"
+        self.collection_name = collection_name
+        self.collection = chroma_client.get_or_create_collection(
+            name=collection_name,
+            embedding_function=get_chroma_ef()
+        )
+
+    def add_chunks(self, chunks, source_file):
+        """Add text chunks with source file metadata."""
+        if not chunks:
+            return
+        ids = [f"{source_file}_{uuid.uuid4().hex[:8]}_{i}" for i in range(len(chunks))]
+        metadatas = [{"source_file": source_file} for _ in chunks]
+        self.collection.add(
+            documents=chunks,
+            metadatas=metadatas,
+            ids=ids
+        )
+
+    def search(self, query, top_k=5):
+        """Search across all chunks, returning results with source metadata."""
+        if self.collection.count() == 0:
             return []
-        model = get_embedding_model()
-        query_embedding = model.encode([query])[0]
-        similarities = []
-        for i, chunk_emb in enumerate(self.embeddings):
-            sim = np.dot(query_embedding, chunk_emb) / (np.linalg.norm(query_embedding) * np.linalg.norm(chunk_emb))
-            similarities.append((sim, self.chunks[i]))
-        similarities.sort(key=lambda x: x[0], reverse=True)
-        return [chunk for sim, chunk in similarities[:top_k]]
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=min(top_k, self.collection.count())
+        )
+        output = []
+        if results and results['documents'] and results['documents'][0]:
+            for i, doc in enumerate(results['documents'][0]):
+                source = results['metadatas'][0][i]['source_file'] if results['metadatas'] else "unknown"
+                output.append({
+                    "text": doc,
+                    "source_file": source
+                })
+        return output
 
-class DocumentContext:
-    def __init__(self, filename):
-        self.filename = filename
-        self.db = SimpleVectorDB()
+    def get_chunk_count(self):
+        return self.collection.count()
+
+
+# =====================================================================
+# Global State (Unified Knowledge Base)
+# =====================================================================
+class GlobalKnowledgeBase:
+    def __init__(self):
+        self.db = ChromaVectorDB(collection_name="global_knowledge")
+        self.history = []
+        self.uploaded_files = [] # List of unique filenames
+
+    def clear_history(self):
         self.history = []
 
-# Global Knowledge Base: filename -> DocumentContext
-knowledge_base = {}
+global_kb = GlobalKnowledgeBase()
 
-def extract_text_from_pdf(pdf_path):
-    reader = PdfReader(pdf_path)
+
+# =====================================================================
+# File text extractors
+# =====================================================================
+def extract_text_from_pdf(filepath):
+    reader = PdfReader(filepath)
     text = ""
     for page in reader.pages:
         page_text = page.extract_text()
@@ -87,33 +147,78 @@ def extract_text_from_pdf(pdf_path):
             text += page_text + "\n"
     return text
 
+
+def extract_text_from_txt(filepath):
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+        return f.read()
+
+
+def extract_text_from_docx(filepath):
+    try:
+        import docx
+        doc = docx.Document(filepath)
+        text = ""
+        for para in doc.paragraphs:
+            text += para.text + "\n"
+        return text
+    except ImportError:
+        raise ValueError("python-docx is required for DOCX support. Install it with: pip install python-docx")
+
+
+def extract_text_from_file(filepath, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    if ext == '.pdf':
+        return extract_text_from_pdf(filepath)
+    elif ext == '.txt':
+        return extract_text_from_txt(filepath)
+    elif ext == '.docx':
+        return extract_text_from_docx(filepath)
+    else:
+        raise ValueError(f"Unsupported file format: {ext}. Supported: .pdf, .txt, .docx")
+
+
 def split_text_into_chunks(text, chunk_size=300, overlap=50):
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i : i + chunk_size])
+        chunk = " ".join(words[i: i + chunk_size])
         chunks.append(chunk)
     return chunks
 
+
+# =====================================================================
+# Answer generation
+# =====================================================================
 def generate_answer(query, context, history):
-    context_text = "\n\n---\n\n".join(context)
-    
-    # Increase history buffer to last 10 messages (5 QA pairs)
+    # Build context text with source annotations
+    has_context = False
+    if context and isinstance(context[0], dict):
+        has_context = True
+        context_parts = []
+        for chunk in context:
+            source = chunk.get("source_file", "unknown")
+            text = chunk.get("text", "")
+            context_parts.append(f"[Source: {source}]\n{text}")
+        context_text = "\n\n---\n\n".join(context_parts)
+    else:
+        context_text = ""
+
+    # History buffer (last 10 messages)
     history_text = ""
-    for msg in history[-10:]: 
+    for msg in history[-10:]:
         history_text += f"{msg['role'].capitalize()}: {msg['content']}\n"
-        
+
     # Enhanced greeting and identity detection
     greetings = ["hello", "hi", "hey", "greetings", "helo", "heyo", "how are you", "what's up"]
     lower_query = query.lower()
-    
-    # If it's a pure greeting/identity quest without context, handle it naturally
-    if not context and (any(g in lower_query for g in greetings) or "my name" in lower_query or "who am i" in lower_query):
+
+    # If it's a pure greeting/identity request without context
+    if not has_context and (any(g in lower_query for g in greetings) or "my name" in lower_query or "who am i" in lower_query):
         prompt = f"""You are the RAG Executive AI. 
 1. The user may be introducing themselves or asking about their identity.
 2. Review the Past Conversation carefully. **PRIORITIZE the most recent name** shared by the user in the latest messages.
 3. If they just said "My name is X", that is their current name. Disregard any older or conflicting names from previous turns.
-4. If their name is known, address them directly (e.g., "Hello Kathir").
+4. If their name is known, address them directly.
 5. If not known, be professional and ask how you can help with their documents.
 
 Past Conversation:
@@ -121,15 +226,34 @@ Past Conversation:
 
 New Message: {query}
 Answer:"""
+    elif has_context:
+        prompt = f"""You are a professional assistant analyzing documents.
+
+INSTRUCTIONS:
+1. Use the given Context below to answer the Question. Each context chunk is labeled with [Source: filename].
+2. When your answer draws information from the documents, mention which file it came from (e.g., "According to filename.pdf...").
+3. If the answer only comes from one file, that's fine — do NOT force content from both files.
+4. If the context does not contain the answer, say "I cannot find information about this in the uploaded documents."
+5. Also check the Past Conversation for personal details like the user's name. **Always use the most recent name shared.**
+6. Keep answers concise and professional.
+
+Context:
+{context_text}
+
+Past Conversation:
+{history_text}
+
+Question: {query}
+Answer:"""
     else:
         prompt = f"""You are a professional assistant. 
 1. Use the given Context below to answer the Question.
-2. Also check the Past Conversation for personal details like the user's name. **Always use the most recent name shared.**
-3. If the context is empty and the question isn't about the user's identity, say "I cannot find information about this in the current module."
+2. Also check the Past Conversation for personal details.
+3. If the context is empty and the question isn't about the user's identity, say "Please upload some documents first."
 4. Keep answers concise and professional.
     
 Context:
-{context_text if context_text else "(No context available for this module yet)"}
+(No context available for this module yet)
 
 Past Conversation:
 {history_text}
@@ -138,11 +262,10 @@ Question: {query}
 Answer:"""
 
     print(f"DEBUG: Generating answer for query: '{query}'")
-    print(f"DEBUG: Context length: {len(context_text)}")
     
     client = get_llm_client()
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant", 
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1
     )
@@ -150,108 +273,130 @@ Answer:"""
     print(f"DEBUG: LLM Response: '{answer}'")
     return answer
 
-    return answer
+
+# =====================================================================
+# Routes
+# =====================================================================
 
 @app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        text = extract_text_from_pdf(filepath)
-        if not text.strip():
-             return jsonify({"error": "Empty or unreadable PDF"}), 400
-             
-        chunks = split_text_into_chunks(text)
-        
-        # Create or update document context
-        if filename not in knowledge_base:
-            knowledge_base[filename] = DocumentContext(filename)
-        
-        knowledge_base[filename].db.add_chunks(chunks)
-        
-        # Clean up memory/disk
-        os.remove(filepath)
-        
+@app.route('/upload_multi', methods=['POST'])
+def upload_multi():
+    """Upload any number of files. All are added to the global knowledge base."""
+    files = request.files.getlist('files')
+
+    # Fallback if sent as 'file'
+    if not files and 'file' in request.files:
+        files = request.files.getlist('file')
+
+    # Filter out empty filenames
+    files = [f for f in files if f.filename != '']
+
+    if not files:
+        return jsonify({"error": "No valid files provided"}), 400
+
+    new_filenames = []
+    saved_paths = []
+    total_chunks_added = 0
+
+    try:
+        for file in files:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            saved_paths.append(filepath)
+
+            try:
+                text = extract_text_from_file(filepath, filename)
+            except ValueError as e:
+                # Clean up and return
+                for p in saved_paths:
+                    if os.path.exists(p): os.remove(p)
+                return jsonify({"error": f"Error processing {filename}: {str(e)}"}), 400
+
+            if not text.strip():
+                for p in saved_paths:
+                    if os.path.exists(p): os.remove(p)
+                return jsonify({"error": f"Empty or unreadable file: {filename}"}), 400
+
+            chunks = split_text_into_chunks(text)
+            
+            # Add to global KB
+            global_kb.db.add_chunks(chunks, source_file=filename)
+            total_chunks_added += len(chunks)
+            new_filenames.append(filename)
+            
+            # Track unique filenames
+            if filename not in global_kb.uploaded_files:
+                global_kb.uploaded_files.append(filename)
+
+        # Clean up disk
+        for p in saved_paths:
+            if os.path.exists(p):
+                os.remove(p)
+
         return jsonify({
-            "message": f"Successfully indexed {len(chunks)} chunks in {filename}!",
-            "filename": filename
+            "message": f"Successfully indexed {total_chunks_added} chunks from {len(new_filenames)} files!",
+            "filenames": new_filenames
         })
+
+    except Exception as e:
+        for p in saved_paths:
+            if os.path.exists(p): os.remove(p)
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
 
 @app.route('/ask', methods=['POST'])
 def ask():
     req = request.get_json()
     query = req.get('question')
-    filename = req.get('filename') # Specify which document to query
 
     if not query:
         return jsonify({"error": "No question provided"}), 400
-        
-    if not filename:
-        # Conversation without a document context
-        answer = generate_answer(query, [], global_history)
-        global_history.append({"role": "user", "content": query})
-        global_history.append({"role": "assistant", "content": answer})
-        return jsonify({"answer": answer})
 
-    if filename not in knowledge_base:
-        return jsonify({"error": "Invalid document selection"}), 400
-        
-    ctx = knowledge_base[filename]
-    relevant_chunks = ctx.db.search(query)
-    answer = generate_answer(query, relevant_chunks, ctx.history)
-    
-    ctx.history.append({"role": "user", "content": query})
-    ctx.history.append({"role": "assistant", "content": answer})
-    
-    return jsonify({"answer": answer})
+    # Search global knowledge base
+    relevant_chunks = global_kb.db.search(query, top_k=5)
+    answer = generate_answer(query, relevant_chunks, global_kb.history)
+
+    global_kb.history.append({"role": "user", "content": query})
+    global_kb.history.append({"role": "assistant", "content": answer})
+
+    # Include source info in response
+    sources_used = list(set(chunk["source_file"] for chunk in relevant_chunks)) if relevant_chunks else []
+    return jsonify({"answer": answer, "sources": sources_used})
+
 
 @app.route('/history', methods=['GET'])
 def get_history():
-    filename = request.args.get('filename')
-    if not filename or filename not in knowledge_base:
-        return jsonify({"history": global_history})
-    return jsonify({"history": knowledge_base[filename].history})
+    return jsonify({"history": global_kb.history})
+
 
 @app.route('/delete_history_item', methods=['POST'])
 def delete_history_item():
     req = request.get_json()
-    filename = req.get('filename')
     pair_index = req.get('pair_index')
 
-    if not filename or filename not in knowledge_base:
-        return jsonify({"error": "Invalid document"}), 400
-        
-    history = knowledge_base[filename].history
     start_idx = pair_index * 2
-    if start_idx < len(history) - 1:
-        del history[start_idx:start_idx + 2]
+    if start_idx < len(global_kb.history) - 1:
+        del global_kb.history[start_idx:start_idx + 2]
         return jsonify({"status": "success"})
     else:
         return jsonify({"error": "Invalid index"}), 400
 
+
 @app.route('/clear_history', methods=['POST'])
 def clear_history_route():
-    req = request.get_json()
-    filename = req.get('filename')
-    if filename and filename in knowledge_base:
-        knowledge_base[filename].history = []
+    global_kb.clear_history()
     return jsonify({"status": "success"})
+
 
 @app.route('/status', methods=['GET'])
 def get_status():
     return jsonify({
-        "documents": [
-            {"filename": name, "history_count": len(ctx.history) // 2} 
-            for name, ctx in knowledge_base.items()
-        ]
+        "uploaded_files": global_kb.uploaded_files,
+        "history_count": len(global_kb.history) // 2,
+        "total_chunks": global_kb.db.get_chunk_count()
     })
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
