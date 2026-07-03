@@ -1,11 +1,8 @@
 # Advanced RAG System - Executive Intelligence
 
-![RAG System Showcase](showcase.png)
-
 <div align="center">
-  <h3>✨ View Demo ✨</h3>
-  <a href="https://kathirm1323-ai.github.io/RAG-system/">
-    <img src="https://img.shields.io/badge/View_Demo-d4af37?style=for-the-badge&logoColor=black" alt="View Demo">
+  <a href="https://github.com/kathirm1323-ai/RAG-system">
+    <img src="https://img.shields.io/badge/GitHub-View%20Project-181717?style=flat-square&logo=github" alt="View Project on GitHub">
   </a>
 </div>
 
