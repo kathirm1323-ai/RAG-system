@@ -1,8 +1,8 @@
 # Advanced RAG System - Executive Intelligence
 
 <div align="center">
-  <a href="https://github.com/kathirm1323-ai/RAG-system">
-    <img src="https://img.shields.io/badge/GitHub-View%20Project-181717?style=flat-square&logo=github" alt="View Project on GitHub">
+  <a href="https://kathirm1323-ai.github.io/RAG-system/">
+    <img src="https://img.shields.io/badge/RAG%20System-181717?style=flat-square" alt="RAG System">
   </a>
 </div>
 
