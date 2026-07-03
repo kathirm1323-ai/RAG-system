@@ -1,9 +1,858 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta http-equiv="refresh" content="0; url=demo_static.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYS.RAG // Intelligence</title>
+    <meta name="description" content="Brutalist RAG System">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@500;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-paper: #F4F0EB;
+            --black: #000000;
+            --white: #FFFFFF;
+            --accent-orange: #FF4500;
+            --accent-purple: #7B61FF;
+            --accent-cyan: #00E5FF;
+            
+            --border-thick: 3px solid var(--black);
+            --shadow-hard: 6px 6px 0px var(--black);
+            --shadow-hard-hover: 2px 2px 0px var(--black);
+            --shadow-inset: inset 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Dot Grid Background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-paper);
+            color: var(--black);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            background-image: radial-gradient(var(--black) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Typography */
+        h1, h2, h3, .display-font { font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+
+        /* Structural Layout */
+        .app-container {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            width: calc(100% - 2rem);
+            height: calc(100% - 2rem);
+            border: var(--border-thick);
+            margin: 1rem;
+            background: var(--bg-paper);
+            box-shadow: 10px 10px 0px var(--black);
+        }
+
+        /* ------------------- SIDEBAR ------------------- */
+        .sidebar {
+            border-right: var(--border-thick);
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-paper);
+            overflow: hidden;
+        }
+
+        .brand-header {
+            padding: 1.5rem;
+            border-bottom: var(--border-thick);
+            background: var(--accent-orange);
+            color: var(--black);
+        }
+
+        .brand-header h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .brand-header p {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 800;
+            margin-top: 0.5rem;
+        }
+
+        .section-header {
+            padding: 0.75rem 1rem;
+            background: var(--black);
+            color: var(--white);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Upload Zone */
+        .upload-wrapper {
+            padding: 1rem;
+            border-bottom: var(--border-thick);
+            background: var(--white);
+        }
+
+        .upload-area {
+            border: 3px dashed var(--black);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg-paper);
+            transition: all 0.1s ease;
+            position: relative;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            background: var(--accent-cyan);
+            border-style: solid;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0px var(--black);
+        }
+        
+        .upload-area:active {
+            transform: translate(0, 0);
+            box-shadow: 0px 0px 0px var(--black);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+        }
+
+        input[type="file"] { display: none; }
+
+        /* Library / History Lists */
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--white);
+            border-bottom: var(--border-thick);
+        }
+        
+        /* Custom Blocky Scrollbar */
+        ::-webkit-scrollbar { width: 12px; border-left: var(--border-thick); background: var(--bg-paper); }
+        ::-webkit-scrollbar-thumb { background: var(--black); border: 2px solid var(--bg-paper); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+
+        .library-item {
+            padding: 0.85rem 1rem;
+            border-bottom: var(--border-thick);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--white);
+        }
+        .library-item:hover { background: var(--bg-paper); }
+
+        .history-item {
+            padding: 1rem;
+            border-bottom: 2px solid var(--black);
+            font-size: 0.85rem;
+            cursor: pointer;
+            position: relative;
+        }
+        .history-item:hover { background: rgba(0,0,0,0.05); }
+        
+        .history-item strong {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-purple);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+        }
+
+        .history-content {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        /* Action Buttons */
+        .brutal-btn {
+            background: var(--accent-purple);
+            color: var(--white);
+            border: var(--border-thick);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--black);
+            transition: all 0.1s ease;
+        }
+        .brutal-btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--black); }
+        .brutal-btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--black); }
+        
+        .delete-item-btn {
+            position: absolute;
+            top: 8px; right: 8px;
+            background: var(--accent-orange);
+            color: var(--black);
+            border: 2px solid var(--black);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            width: 24px; height: 24px;
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--black);
+            opacity: 0;
+            transition: all 0.1s;
+        }
+        .history-item:hover .delete-item-btn { opacity: 1; }
+        .delete-item-btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px; }
+
+        /* ------------------- MAIN CHAT AREA ------------------- */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-paper);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 1rem;
+            border-bottom: var(--border-thick);
+            background: var(--white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mode-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 0.85rem;
+            background: var(--accent-cyan);
+            border: var(--border-thick);
+            padding: 4px 12px;
+            box-shadow: 3px 3px 0px var(--black);
+        }
+
+        .active-files-badge {
+            display: none;
+            padding: 0.75rem 1rem;
+            background: var(--white);
+            border-bottom: var(--border-thick);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .active-files-badge.show { display: flex; }
+        .file-tag {
+            background: var(--accent-purple);
+            color: var(--white);
+            padding: 2px 8px;
+            border: 2px solid var(--black);
+            display: inline-block;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Chat Bubbles */
+        .message {
+            max-width: 80%;
+            padding: 1.25rem;
+            border: var(--border-thick);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.95) translateY(20px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .msg-user {
+            background: var(--black);
+            color: var(--white);
+            align-self: flex-end;
+            box-shadow: -6px 6px 0px var(--accent-cyan);
+            border-bottom-right-radius: 0;
+        }
+
+        .msg-ai {
+            background: var(--white);
+            color: var(--black);
+            align-self: flex-start;
+            box-shadow: 6px 6px 0px var(--accent-orange);
+            border-bottom-left-radius: 0;
+        }
+
+        .msg-ai::before {
+            content: "SYSTEM";
+            position: absolute;
+            top: -14px; left: -3px;
+            background: var(--accent-orange);
+            color: var(--black);
+            border: var(--border-thick);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+        }
+
+        /* Source Tags */
+        .source-tags {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px dashed var(--black);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .source-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 800;
+            background: var(--accent-cyan);
+            border: 2px solid var(--black);
+            padding: 2px 8px;
+            box-shadow: 2px 2px 0px var(--black);
+        }
+
+        /* Input Area */
+        .input-wrapper {
+            padding: 1.5rem;
+            background: var(--white);
+            border-top: var(--border-thick);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--bg-paper);
+            border: var(--border-thick);
+            padding: 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            box-shadow: inset 4px 4px 0px rgba(0,0,0,0.05);
+        }
+        input[type="text"]:focus {
+            background: #fff;
+            border-color: var(--accent-purple);
+        }
+
+        button.send-btn {
+            background: var(--accent-orange);
+            color: var(--black);
+            border: var(--border-thick);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 900;
+            padding: 0 2rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-hard);
+            transition: all 0.1s ease;
+        }
+        button.send-btn:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px var(--black);
+        }
+        button.send-btn:active:not(:disabled) {
+            transform: translate(6px, 6px);
+            box-shadow: 0px 0px 0px var(--black);
+        }
+        button.send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: 0px 0px 0px var(--black);
+            transform: translate(6px, 6px);
+        }
+
+        /* Welcome State */
+        .welcome-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            text-align: center;
+        }
+        .welcome-state h2 {
+            font-size: 3rem;
+            background: var(--black);
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            transform: rotate(-2deg);
+            margin-bottom: 1rem;
+            box-shadow: 6px 6px 0px var(--accent-orange);
+            border: var(--border-thick);
+        }
+        .welcome-state p {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            background: var(--white);
+            border: var(--border-thick);
+            padding: 1rem;
+            box-shadow: 4px 4px 0px var(--black);
+        }
+
+        /* Loaders & Toasts */
+        .loader {
+            display: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--accent-purple);
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .toast {
+            position: fixed;
+            top: 20px; right: 20px;
+            background: var(--accent-cyan);
+            border: var(--border-thick);
+            color: var(--black);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-hard);
+            transform: translateX(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+        .toast.error { background: var(--accent-orange); color: var(--white); }
+        .toast.show { transform: translateX(0); }
+
+        /* Highlight Flash */
+        @keyframes flashHighlight {
+            0% { background: var(--accent-cyan); transform: scale(1.02); }
+            100% { background: var(--white); transform: scale(1); }
+        }
+        .highlight-flash { animation: flashHighlight 1s ease-out; }
+        
+        /* Mobile */
+        @media (max-width: 900px) {
+            .app-container { grid-template-columns: 1fr; margin: 0; border: none; box-shadow: none; }
+            .sidebar { border-right: none; border-bottom: var(--border-thick); max-height: 40vh; }
+        }
+    </style>
 </head>
 <body>
-    <p>Redirecting to <a href="demo_static.html">View Demo</a>...</p>
+
+    <div class="app-container">
+        <!-- Sidebar Layout -->
+        <aside class="sidebar">
+            <div class="brand-header">
+                <h1>RAG</h1>
+            </div>
+
+            <div class="upload-wrapper">
+                <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <div class="upload-icon">[ + ]</div>
+                    <div id="upload-text" class="mono-font" style="font-weight: 700; font-size: 0.85rem;">LOAD CONTEXT FILES</div>
+                    <div class="mono-font" style="font-size: 0.65rem; margin-top: 5px;">PDF / TXT / DOCX</div>
+                    <div class="loader" id="upload-loader">[ █ ]</div>
+                </div>
+                <input type="file" id="file-input" accept=".pdf,.txt,.docx" multiple>
+            </div>
+
+            <div class="section-header">
+                <span>Modules Loaded</span>
+            </div>
+            <div class="list-container" id="library-box">
+                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>
+            </div>
+
+            <div class="section-header" style="display: none;">
+                <span>Global Trace Log</span>
+                <button id="clear-btn" class="brutal-btn" style="font-size:0.65rem; padding: 2px 6px;">PURGE</button>
+            </div>
+            <div class="list-container" id="history-box" style="border-bottom:none; display: none;">
+                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO TRACES IN BUFFER</div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Workspace -->
+        <main class="chat-area">
+            <div class="chat-header">
+                <span class="mode-badge" id="mode-badge">IDLE_MODE</span>
+            </div>
+
+            <div class="active-files-badge" id="active-files-badge">
+                <strong style="color: var(--black);">ACTIVE_SOURCES:</strong>
+            </div>
+
+            <div class="chat-container" id="chat-box">
+                <div class="welcome-state" id="welcome-state">
+                    <h2>INITIATE SEQUENCE</h2>
+                    <p>> LOAD FILES TO BEGIN RAG ANALYSIS</p>
+                </div>
+            </div>
+            
+            <div class="input-wrapper">
+                <div class="input-group">
+                    <input type="text" id="query-input" placeholder="> ENTER QUERY..." autocomplete="off">
+                    <button class="send-btn" id="send-btn">→</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast" id="toast">SYSTEM_MSG</div>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadText = document.getElementById('upload-text');
+        const uploadLoader = document.getElementById('upload-loader');
+        
+        const chatBox = document.getElementById('chat-box');
+        const queryInput = document.getElementById('query-input');
+        const sendBtn = document.getElementById('send-btn');
+        const toast = document.getElementById('toast');
+        const historyBox = document.getElementById('history-box');
+        const libraryBox = document.getElementById('library-box');
+        const modeBadge = document.getElementById('mode-badge');
+        const activeFilesBadge = document.getElementById('active-files-badge');
+        const welcomeState = document.getElementById('welcome-state');
+
+        let isReady = false;
+        let interactionCount = 0;
+        let globalUploadedFiles = [];
+
+        // UI Helpers
+        function showToast(msg, isError=false) {
+            toast.textContent = msg;
+            toast.className = `toast show ${isError ? 'error' : ''}`;
+            setTimeout(() => toast.className = 'toast', 4000);
+        }
+
+        function hideWelcome() {
+            if (welcomeState) welcomeState.style.display = 'none';
+        }
+
+        function updateModeBadge() {
+            if (globalUploadedFiles.length > 0) {
+                modeBadge.textContent = `GLOBAL_RAG_MODE [${globalUploadedFiles.length}]`;
+                modeBadge.style.background = 'var(--accent-purple)';
+                modeBadge.style.color = 'var(--white)';
+                
+                // Show active files badge
+                let tagsHtml = '<strong>ACTIVE_SOURCES: </strong>';
+                globalUploadedFiles.forEach(f => {
+                    tagsHtml += `<span class="file-tag">${f}</span>`;
+                });
+                activeFilesBadge.innerHTML = tagsHtml;
+                activeFilesBadge.classList.add('show');
+                
+                queryInput.placeholder = `> TARGETING ${globalUploadedFiles.length} FILES...`;
+            } else {
+                modeBadge.textContent = 'IDLE_MODE';
+                modeBadge.style.background = 'var(--accent-cyan)';
+                modeBadge.style.color = 'var(--black)';
+                activeFilesBadge.classList.remove('show');
+                queryInput.placeholder = `> UPLOAD A FILE TO BEGIN...`;
+            }
+        }
+
+        function appendMessage(sender, text, id = null, sources = null) {
+            hideWelcome();
+            const div = document.createElement('div');
+            div.className = `message ${sender === 'user' ? 'msg-user' : 'msg-ai'}`;
+            if (id) div.id = id;
+            
+            let html = text.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+            
+            div.innerHTML = html;
+            chatBox.appendChild(div);
+            setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 50);
+            return div;
+        }
+
+        function appendHistoryItem(query, snippet, index) {
+            const placeholder = historyBox.querySelector('div[style*="text-align: center"]');
+            if (placeholder) historyBox.innerHTML = '';
+            
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.setAttribute('data-index', index);
+            div.innerHTML = `
+                <button class="delete-item-btn" title="DELETE" onclick="event.stopPropagation(); deleteHistoryItem(${index}, this.parentElement)">X</button>
+                <div class="history-content">
+                    <strong>> ${query}</strong>
+                    <span class="mono-font" style="font-size:0.75rem;">${snippet}</span>
+                </div>
+            `;
+            
+            div.onclick = () => {
+                const targetId = `msg-pair-${index}`;
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.classList.remove('highlight-flash');
+                    void targetElement.offsetWidth;
+                    targetElement.classList.add('highlight-flash');
+                    showToast("LOCATING TRACE...");
+                } else {
+                    showToast("TRACE NOT IN BUFFER", true);
+                }
+            };
+            
+            historyBox.insertBefore(div, historyBox.firstChild);
+        }
+
+        async function deleteHistoryItem(pairIndex, element) {
+            if (!confirm("PURGE THIS TRACE?")) return;
+            
+            try {
+                const response = await fetch(`/delete_history_item`, { 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ pair_index: pairIndex })
+                });
+                if (response.ok) {
+                    element.style.display = 'none';
+                    setTimeout(() => { fetchHistory(); showToast("TRACE PURGED"); }, 100);
+                } else {
+                    showToast("PURGE FAILED", true);
+                }
+            } catch (e) {
+                showToast("NETWORK ERROR", true);
+            }
+        }
+
+        async function fetchHistory() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+                if (data.history) {
+                    historyBox.innerHTML = '';
+                    chatBox.innerHTML = '';
+                    
+                    if (data.history.length > 0) hideWelcome();
+                    
+                    interactionCount = 0;
+                    for (let i = 0; i < data.history.length; i += 2) {
+                        if (data.history[i] && data.history[i+1]) {
+                            const pairIndex = interactionCount++;
+                            const userText = data.history[i].content;
+                            const aiText = data.history[i+1].content;
+                            
+                            appendHistoryItem(userText, aiText, pairIndex);
+                            appendMessage('user', userText, `msg-pair-${pairIndex}`);
+                            appendMessage('ai', aiText);
+                        }
+                    }
+                    if (data.history.length === 0) {
+                        historyBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO TRACES IN BUFFER</div>';
+                        if (globalUploadedFiles.length > 0) {
+                            const sysMsg = document.createElement('div');
+                            sysMsg.className = 'mono-font';
+                            sysMsg.style = 'align-self: center; background: var(--black); color: var(--white); padding: 4px 12px; font-size: 0.75rem; border: var(--border-thick); box-shadow: 4px 4px 0px var(--accent-purple);';
+                            sysMsg.textContent = `GLOBAL BUFFER READY`;
+                            chatBox.appendChild(sysMsg);
+                        } else {
+                            if (welcomeState) {
+                                welcomeState.style.display = 'flex';
+                                chatBox.appendChild(welcomeState);
+                            }
+                        }
+                    } else {
+                        setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
+                    }
+                }
+            } catch(e) {
+                console.log("History fetch failed", e);
+            }
+        }
+        
+        async function updateStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                libraryBox.innerHTML = '';
+                
+                globalUploadedFiles = data.uploaded_files || [];
+                
+                if (globalUploadedFiles.length > 0) {
+                    isReady = true;
+                    globalUploadedFiles.forEach(filename => {
+                        const div = document.createElement('div');
+                        div.className = 'library-item';
+                        div.innerHTML = `<span>📄</span><span>${filename}</span>`;
+                        libraryBox.appendChild(div);
+                    });
+                } else {
+                    isReady = false;
+                    libraryBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>';
+                }
+                
+                updateModeBadge();
+            } catch (e) {
+                console.log("Status update failed", e);
+            }
+        }
+
+        // Upload Logic
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+        });
+
+        async function handleFiles(fileList) {
+            const files = Array.from(fileList);
+            if (files.length === 0) return;
+
+            const allowedExts = ['.pdf', '.txt', '.docx'];
+            for (const file of files) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                if (!allowedExts.includes(ext)) {
+                    showToast(`FORMAT REJECTED: ${ext}`, true);
+                    return;
+                }
+            }
+
+            uploadText.style.display = 'none';
+            uploadLoader.style.display = 'block';
+
+            try {
+                const formData = new FormData();
+                files.forEach(file => formData.append('files', file));
+
+                const response = await fetch('/upload_multi', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast("INGESTION COMPLETE");
+                    await updateStatus();
+                } else {
+                    showToast(data.error || "INGESTION FAILED", true);
+                }
+            } catch(e) {
+                showToast("NETWORK ERROR", true);
+            } finally {
+                uploadText.style.display = 'block';
+                uploadLoader.style.display = 'none';
+                uploadText.textContent = "LOAD CONTEXT FILES";
+                fileInput.value = '';
+            }
+        }
+
+        // Chat Logic
+        async function sendMessage() {
+            const text = queryInput.value.trim();
+            if (!text) return;
+            if (!isReady) {
+                showToast("SYSTEM ERR: UPLOAD A FILE FIRST", true);
+                return;
+            }
+
+            const pairIndex = interactionCount++;
+            appendMessage('user', text, `msg-pair-${pairIndex}`);
+            queryInput.value = '';
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'message msg-ai';
+            thinkingDiv.id = 'thinking-msg';
+            thinkingDiv.innerHTML = '<span class="mono-font" style="font-weight:800; color: var(--accent-orange); animation: blink 1s step-end infinite;">[ █ ] PROCESSING...</span>';
+            chatBox.appendChild(thinkingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question: text })
+                });
+                const data = await response.json();
+                
+                const th = document.getElementById('thinking-msg');
+                if (th) th.remove();
+                
+                if (response.ok) {
+                    appendMessage('ai', data.answer, null, data.sources || null);
+                    appendHistoryItem(text, data.answer, pairIndex); 
+                } else {
+                    appendMessage('ai', "ERR: " + (data.error || "GENERATION FAILED"));
+                }
+            } catch(e) {
+                const th = document.getElementById('thinking-msg');
+                if (th) th.remove();
+                appendMessage('ai', "CRITICAL: HOST UNREACHABLE");
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        queryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        const clearBtn = document.getElementById('clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async () => {
+                try {
+                    await fetch('/clear_history', { method: 'POST' });
+                    historyBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">TRACE PURGED</div>';
+                    interactionCount = 0;
+                    chatBox.innerHTML = '';
+                    if (welcomeState) {
+                        welcomeState.style.display = 'flex';
+                        chatBox.appendChild(welcomeState);
+                    }
+                    showToast("BUFFER CLEARED");
+                } catch(e) {
+                    showToast("PURGE FAILED", true);
+                }
+            });
+        }
+
+        // Initialize
+        window.addEventListener('load', async () => {
+            try {
+                await updateStatus();
+                await fetchHistory();
+            } catch (e) {
+                console.log("Status check failed", e);
+            }
+        });
+    </script>
 </body>
 </html>
