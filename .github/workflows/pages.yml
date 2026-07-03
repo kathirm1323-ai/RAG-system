@@ -27,7 +27,7 @@ jobs:
       - name: Prepare static files
         run: |
           mkdir -p public
-          cp templates/index.html public/index.html
+          cp frontend/index.html public/index.html
           
       - name: Setup Pages
         uses: actions/configure-pages@v5
