@@ -766,15 +766,21 @@
                 files.forEach(file => formData.append('files', file));
 
                 const response = await fetch(API_BASE_URL + '/upload_multi', { method: 'POST', body: formData });
-                const data = await response.json();
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch(jsonErr) {
+                    console.error("Failed to parse upload response JSON:", jsonErr);
+                }
                 
                 if (response.ok) {
                     showToast("INGESTION COMPLETE");
                     await updateStatus();
                 } else {
-                    showToast(data.error || "INGESTION FAILED", true);
+                    showToast(data.error || `INGESTION FAILED (Status: ${response.status})`, true);
                 }
             } catch(e) {
+                console.error("Upload network error details:", e);
                 showToast("NETWORK ERROR", true);
             } finally {
                 uploadText.style.display = 'block';
@@ -810,7 +816,12 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ question: text })
                 });
-                const data = await response.json();
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch(jsonErr) {
+                    console.error("Failed to parse ask response JSON:", jsonErr);
+                }
                 
                 const th = document.getElementById('thinking-msg');
                 if (th) th.remove();
@@ -819,9 +830,10 @@
                     appendMessage('ai', data.answer, null, data.sources || null);
                     appendHistoryItem(text, data.answer, pairIndex); 
                 } else {
-                    appendMessage('ai', "ERR: " + (data.error || "GENERATION FAILED"));
+                    appendMessage('ai', "ERR: " + (data.error || `GENERATION FAILED (Status: ${response.status})`));
                 }
             } catch(e) {
+                console.error("Ask network error details:", e);
                 const th = document.getElementById('thinking-msg');
                 if (th) th.remove();
                 appendMessage('ai', "CRITICAL: HOST UNREACHABLE");
