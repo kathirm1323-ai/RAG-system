@@ -135,18 +135,26 @@ class ChromaVectorDB:
 
 
 # =====================================================================
-# Global State (Unified Knowledge Base)
+# State (Unified Knowledge Base per Session)
 # =====================================================================
-class GlobalKnowledgeBase:
-    def __init__(self):
-        self.db = ChromaVectorDB(collection_name="global_knowledge")
+class SessionKnowledgeBase:
+    def __init__(self, session_id):
+        self.session_id = session_id
+        self.db = ChromaVectorDB(collection_name=f"session_{session_id}")
         self.history = []
         self.uploaded_files = [] # List of unique filenames
 
     def clear_history(self):
         self.history = []
 
-global_kb = GlobalKnowledgeBase()
+sessions = {}
+
+def get_session(session_id):
+    if not session_id:
+        session_id = "default"
+    if session_id not in sessions:
+        sessions[session_id] = SessionKnowledgeBase(session_id)
+    return sessions[session_id]
 
 
 # =====================================================================
@@ -295,7 +303,10 @@ Answer:"""
 @app.route('/upload', methods=['POST'])
 @app.route('/upload_multi', methods=['POST'])
 def upload_multi():
-    """Upload any number of files. All are added to the global knowledge base."""
+    """Upload any number of files to a specific session."""
+    session_id = request.form.get('session_id', 'default')
+    session = get_session(session_id)
+    
     files = request.files.getlist('files')
 
     # Fallback if sent as 'file'
@@ -334,14 +345,14 @@ def upload_multi():
 
             chunks = split_text_into_chunks(text)
             
-            # Add to global KB
-            global_kb.db.add_chunks(chunks, source_file=filename)
+            # Add to session KB
+            session.db.add_chunks(chunks, source_file=filename)
             total_chunks_added += len(chunks)
             new_filenames.append(filename)
             
             # Track unique filenames
-            if filename not in global_kb.uploaded_files:
-                global_kb.uploaded_files.append(filename)
+            if filename not in session.uploaded_files:
+                session.uploaded_files.append(filename)
 
         # Clean up disk
         for p in saved_paths:
@@ -364,16 +375,18 @@ def ask():
     try:
         req = request.get_json()
         query = req.get('question')
+        session_id = req.get('session_id', 'default')
+        session = get_session(session_id)
 
         if not query:
             return jsonify({"error": "No question provided"}), 400
 
-        # Search global knowledge base
-        relevant_chunks = global_kb.db.search(query, top_k=5)
-        answer = generate_answer(query, relevant_chunks, global_kb.history)
+        # Search session knowledge base
+        relevant_chunks = session.db.search(query, top_k=5)
+        answer = generate_answer(query, relevant_chunks, session.history)
 
-        global_kb.history.append({"role": "user", "content": query})
-        global_kb.history.append({"role": "assistant", "content": answer})
+        session.history.append({"role": "user", "content": query})
+        session.history.append({"role": "assistant", "content": answer})
 
         # Include source info in response
         sources_used = list(set(chunk["source_file"] for chunk in relevant_chunks)) if relevant_chunks else []
@@ -387,17 +400,21 @@ def ask():
 
 @app.route('/history', methods=['GET'])
 def get_history():
-    return jsonify({"history": global_kb.history})
+    session_id = request.args.get('session_id', 'default')
+    session = get_session(session_id)
+    return jsonify({"history": session.history})
 
 
 @app.route('/delete_history_item', methods=['POST'])
 def delete_history_item():
     req = request.get_json()
     pair_index = req.get('pair_index')
+    session_id = req.get('session_id', 'default')
+    session = get_session(session_id)
 
     start_idx = pair_index * 2
-    if start_idx < len(global_kb.history) - 1:
-        del global_kb.history[start_idx:start_idx + 2]
+    if start_idx < len(session.history) - 1:
+        del session.history[start_idx:start_idx + 2]
         return jsonify({"status": "success"})
     else:
         return jsonify({"error": "Invalid index"}), 400
@@ -405,16 +422,21 @@ def delete_history_item():
 
 @app.route('/clear_history', methods=['POST'])
 def clear_history_route():
-    global_kb.clear_history()
+    req = request.get_json() or {}
+    session_id = req.get('session_id', 'default')
+    session = get_session(session_id)
+    session.clear_history()
     return jsonify({"status": "success"})
 
 
 @app.route('/status', methods=['GET'])
 def get_status():
+    session_id = request.args.get('session_id', 'default')
+    session = get_session(session_id)
     return jsonify({
-        "uploaded_files": global_kb.uploaded_files,
-        "history_count": len(global_kb.history) // 2,
-        "total_chunks": global_kb.db.get_chunk_count()
+        "uploaded_files": session.uploaded_files,
+        "history_count": len(session.history) // 2,
+        "total_chunks": session.db.get_chunk_count()
     })
 
 
