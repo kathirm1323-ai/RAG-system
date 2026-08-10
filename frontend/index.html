@@ -534,13 +534,11 @@
     <div class="toast" id="toast">SYSTEM_MSG</div>
 
     <script>
-        // ====================================================================
-        // CONFIGURATION: Set your backend URL here.
-        // For local development, use: ''  (empty string)
-        // For production, use your Hugging Face Space URL, e.g.:
-        //   'https://YOUR-USERNAME-rag-backend.hf.space'
-        // ====================================================================
-        const API_BASE_URL = 'https://ascvas-rag-backend.hf.space';
+        // ============================================================
+        // CONFIGURATION: Set this to your Hugging Face Space URL
+        // Example: 'https://your-username-rag-backend.hf.space'
+        // ============================================================
+        const API_BASE_URL = 'https://YOUR-HF-SPACE-URL.hf.space';
 
         // DOM Elements
         const dropZone = document.getElementById('drop-zone');
@@ -665,7 +663,7 @@
 
         async function fetchHistory() {
             try {
-                const response = await fetch(`${API_BASE_URL}/history`);
+                const response = await fetch(API_BASE_URL + '/history');
                 const data = await response.json();
                 if (data.history) {
                     historyBox.innerHTML = '';
@@ -710,7 +708,7 @@
         
         async function updateStatus() {
             try {
-                const response = await fetch(`${API_BASE_URL}/status`);
+                const response = await fetch(API_BASE_URL + '/status');
                 const data = await response.json();
                 libraryBox.innerHTML = '';
                 
@@ -767,7 +765,7 @@
                 const formData = new FormData();
                 files.forEach(file => formData.append('files', file));
 
-                const response = await fetch(`${API_BASE_URL}/upload_multi`, { method: 'POST', body: formData });
+                const response = await fetch(API_BASE_URL + '/upload_multi', { method: 'POST', body: formData });
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -807,7 +805,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/ask`, {
+                const response = await fetch(API_BASE_URL + '/ask', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ question: text })
@@ -837,7 +835,7 @@
         if (clearBtn) {
             clearBtn.addEventListener('click', async () => {
                 try {
-                    await fetch(`${API_BASE_URL}/clear_history`, { method: 'POST' });
+                    await fetch(API_BASE_URL + '/clear_history', { method: 'POST' });
                     historyBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">TRACE PURGED</div>';
                     interactionCount = 0;
                     chatBox.innerHTML = '';

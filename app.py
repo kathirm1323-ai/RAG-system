@@ -1,24 +1,19 @@
 import os
 import uuid
-import numpy as np
+import math
+import re
+from collections import Counter
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
 from groq import Groq
 from dotenv import load_dotenv
-import chromadb
-from chromadb.utils import embedding_functions
 
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs('uploads', exist_ok=True)
-
-# Set transformers cache to a writable directory on Render
-os.environ['TRANSFORMERS_CACHE'] = '/tmp'
-os.environ['SENTENCE_TRANSFORMERS_HOME'] = '/tmp'
 
 
 @app.route('/health')
@@ -46,78 +41,95 @@ def get_llm_client():
 
 
 # Global variables
-embedding_model = None
-
-
-def get_embedding_model():
-    global embedding_model
-    if embedding_model is None:
-        print("Loading Embedding Model...")
-        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-    return embedding_model
+def tokenize(text):
+    return re.findall(r'\w+', text.lower())
 
 
 # =====================================================================
-# ChromaDB-backed Vector Database with source metadata
+# Lightweight Search Database with source metadata (BM25)
 # =====================================================================
-chroma_client = chromadb.Client()  # In-memory ChromaDB
-
-sentence_transformer_ef = None
-
-
-def get_chroma_ef():
-    global sentence_transformer_ef
-    if sentence_transformer_ef is None:
-        sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-    return sentence_transformer_ef
-
-
 class ChromaVectorDB:
-    """Vector database backed by ChromaDB with source file metadata."""
+    """Lightweight, pure-Python search database replacing ChromaDB with BM25 retrieval."""
 
     def __init__(self, collection_name=None):
-        if collection_name is None:
-            collection_name = f"collection_{uuid.uuid4().hex[:8]}"
-        self.collection_name = collection_name
-        self.collection = chroma_client.get_or_create_collection(
-            name=collection_name,
-            embedding_function=get_chroma_ef()
-        )
+        self.collection_name = collection_name or f"collection_{uuid.uuid4().hex[:8]}"
+        self.documents = []  # list of dicts: {"text": str, "source_file": str, "tokens": list}
+        self.idf = {}
+        self.vocab = set()
 
     def add_chunks(self, chunks, source_file):
         """Add text chunks with source file metadata."""
         if not chunks:
             return
-        ids = [f"{source_file}_{uuid.uuid4().hex[:8]}_{i}" for i in range(len(chunks))]
-        metadatas = [{"source_file": source_file} for _ in chunks]
-        self.collection.add(
-            documents=chunks,
-            metadatas=metadatas,
-            ids=ids
-        )
+        for chunk in chunks:
+            tokens = tokenize(chunk)
+            self.documents.append({
+                "text": chunk,
+                "source_file": source_file,
+                "tokens": tokens
+            })
+        self._update_idf()
+
+    def _update_idf(self):
+        """Recalculate IDF for all terms in the vocabulary."""
+        N = len(self.documents)
+        if N == 0:
+            return
+        
+        df = Counter()
+        for doc in self.documents:
+            unique_terms = set(doc["tokens"])
+            for term in unique_terms:
+                df[term] += 1
+        
+        self.vocab = set(df.keys())
+        self.idf = {}
+        for term, freq in df.items():
+            self.idf[term] = math.log(1 + (N - freq + 0.5) / (freq + 0.5)) + 1
 
     def search(self, query, top_k=5):
-        """Search across all chunks, returning results with source metadata."""
-        if self.collection.count() == 0:
+        """Search across all chunks using BM25 relevance scoring."""
+        if not self.documents:
             return []
-        results = self.collection.query(
-            query_texts=[query],
-            n_results=min(top_k, self.collection.count())
-        )
-        output = []
-        if results and results['documents'] and results['documents'][0]:
-            for i, doc in enumerate(results['documents'][0]):
-                source = results['metadatas'][0][i]['source_file'] if results['metadatas'] else "unknown"
-                output.append({
-                    "text": doc,
-                    "source_file": source
-                })
-        return output
+        
+        query_tokens = tokenize(query)
+        if not query_tokens:
+            return [{"text": doc["text"], "source_file": doc["source_file"]} for doc in self.documents[:top_k]]
+        
+        k1 = 1.5
+        b = 0.75
+        avg_doc_len = sum(len(doc["tokens"]) for doc in self.documents) / len(self.documents)
+        
+        scores = []
+        for idx, doc in enumerate(self.documents):
+            score = 0.0
+            doc_len = len(doc["tokens"])
+            doc_token_counts = Counter(doc["tokens"])
+            
+            for term in query_tokens:
+                if term in self.vocab:
+                    tf = doc_token_counts[term]
+                    idf = self.idf.get(term, 0.0)
+                    numerator = tf * (k1 + 1)
+                    denominator = tf + k1 * (1 - b + b * (doc_len / (avg_doc_len or 1.0)))
+                    score += idf * (numerator / denominator)
+            
+            scores.append((score, idx))
+        
+        scores.sort(key=lambda x: x[0], reverse=True)
+        
+        top_results = []
+        for score, idx in scores[:top_k]:
+            doc = self.documents[idx]
+            top_results.append({
+                "text": doc["text"],
+                "source_file": doc["source_file"]
+            })
+            
+        return top_results
 
     def get_chunk_count(self):
-        return self.collection.count()
+        return len(self.documents)
 
 
 # =====================================================================

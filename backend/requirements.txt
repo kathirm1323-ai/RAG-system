@@ -1,11 +1,8 @@
 Flask==3.0.3
-flask-cors==4.0.0
 Werkzeug==3.0.1
 pypdf==4.0.1
-sentence-transformers==2.5.1
 groq==0.4.2
 python-dotenv==1.0.1
-numpy==1.26.4
 gunicorn==21.2.0
-chromadb>=0.4.0
 python-docx>=0.8.11
+flask-cors==4.0.0

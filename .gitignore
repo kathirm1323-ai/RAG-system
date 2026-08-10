@@ -3,6 +3,7 @@ __pycache__/
 *.tar.gz
 uploads/
 .env
+backend/.env
 .idea/
 .vscode/
 
