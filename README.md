@@ -1,53 +1,42 @@
-# Advanced RAG System - Executive Intelligence
+## 📚 RAG Document Question Answering System
 
-<div align="center">
-  <a href="https://kathirm1323-ai.github.io/RAG-system/">
-    <img src="https://img.shields.io/badge/RAG%20System-ffffff?style=for-the-badge" alt="RAG System">
-  </a>
-</div>
+A Retrieval-Augmented Generation system that allows users to upload PDF documents and ask questions based on the document content.
 
-<br>
+### 🛠️ Tech Stack
 
-A high-performance Retrieval-Augmented Generation (RAG) system with a premium, modern UI. This application allows you to index PDF documents and have intelligent conversations about their content.
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-LLM_API-orange?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-Retrieval_Augmented_Generation-purple?style=for-the-badge)
+![Sentence Transformers](https://img.shields.io/badge/SentenceTransformers-Embeddings-yellow?style=for-the-badge)
 
-## ✨ Features
+---
 
-- **Document Indexing**: Drag-and-drop PDF upload for instant vectorization and analysis.
-- **Premium UI**: Sleek dark-mode interface with gold accents and glassmorphism aesthetics.
-- **Scrollable History Sidebar**: Keep track of all your queries in a dedicated, scrollable sidebar.
-- **Individual Deletion**: Manage your history by deleting specific Q&A pairs directly from the sidebar.
-- **Smooth Navigation**: Clicking a history item smoothly scrolls the chat window to the original message and highlights it with a gold pulse.
-- **Session Persistence**: The system automatically detects if a document is already indexed on page load, keeping the chat active even after a refresh.
+## 🔄 Workflow
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.8+
-- Groq API Key (Replace in `app.py`)
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/kathirm1323-ai/RAG-system.git
-   cd RAG-system
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Run the application:
-   ```bash
-   python app.py
-   ```
-
-4. Access the UI:
-   Navigate to `http://127.0.0.1:5000` in your browser.
-
-## 🛠️ Technology Stack
-- **Backend**: Flask (Python)
-- **Embeddings**: Sentence-Transformers (`all-MiniLM-L6-v2`)
-- **LLM**: Groq (Llama 3.1)
-- **Frontend**: Vanilla HTML5, CSS3 (Glassmorphism), and JavaScript (ES6)
+```text
+User Uploads PDF
+        ↓
+PDF Text Extraction
+        ↓
+Text Chunking
+        ↓
+SentenceTransformer
+        ↓
+Generate Embeddings
+        ↓
+Store / Search Document Chunks
+        ↓
+User Asks Question
+        ↓
+Convert Question into Embedding
+        ↓
+Semantic Search
+        ↓
+Retrieve Relevant Chunks
+        ↓
+Send Question + Context to Groq LLM
+        ↓
+Generate Final Answer
+        ↓
+Display Answer to User
