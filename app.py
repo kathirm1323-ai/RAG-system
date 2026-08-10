@@ -4,6 +4,7 @@ import math
 import re
 from collections import Counter
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from pypdf import PdfReader
 from groq import Groq
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
+CORS(app)  # Enable CORS for all routes (allows frontend on GitHub Pages to connect)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs('uploads', exist_ok=True)
 
