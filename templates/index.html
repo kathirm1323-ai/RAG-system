@@ -479,12 +479,6 @@
                 <h1>RAG</h1>
             </div>
 
-            <div style="padding: 1rem; border-bottom: var(--border-thick);">
-                <button id="new-chat-btn" class="brutal-btn" style="width: 100%; font-size: 1rem; padding: 0.75rem;">
-                    [ + ] NEW CHAT
-                </button>
-            </div>
-
             <div class="upload-wrapper">
                 <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
                     <div class="upload-icon">[ + ]</div>
@@ -502,11 +496,12 @@
                 <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>
             </div>
 
-            <div class="section-header">
-                <span>CHAT HISTORY</span>
+            <div class="section-header" style="display: none;">
+                <span>Global Trace Log</span>
+                <button id="clear-btn" class="brutal-btn" style="font-size:0.65rem; padding: 2px 6px;">PURGE</button>
             </div>
-            <div class="list-container" id="chat-history-list" style="border-bottom: var(--border-thick); max-height: 250px;">
-                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO CHATS YET</div>
+            <div class="list-container" id="history-box" style="border-bottom:none; display: none;">
+                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO TRACES IN BUFFER</div>
             </div>
         </aside>
 
@@ -549,12 +544,11 @@
         const queryInput = document.getElementById('query-input');
         const sendBtn = document.getElementById('send-btn');
         const toast = document.getElementById('toast');
-        const chatHistoryList = document.getElementById('chat-history-list');
+        const historyBox = document.getElementById('history-box');
         const libraryBox = document.getElementById('library-box');
         const modeBadge = document.getElementById('mode-badge');
         const activeFilesBadge = document.getElementById('active-files-badge');
         const welcomeState = document.getElementById('welcome-state');
-        const newChatBtn = document.getElementById('new-chat-btn');
 
         let isReady = false;
         let interactionCount = 0;
@@ -638,10 +632,10 @@
                 }
             };
             
-        // --- Session Management ---
-        let chats = JSON.parse(localStorage.getItem('rag_chats')) || [];
-        let currentChatId = null;
+            historyBox.insertBefore(div, historyBox.firstChild);
+        }
 
+        // --- Session Management ---
         function generateUUID() {
             return 'xxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -649,131 +643,69 @@
             });
         }
 
-        function saveChats() {
-            localStorage.setItem('rag_chats', JSON.stringify(chats));
+        let sessionId = sessionStorage.getItem('rag_session_id');
+        if (!sessionId) {
+            sessionId = generateUUID();
+            sessionStorage.setItem('rag_session_id', sessionId);
         }
 
-        function getCurrentChat() {
-            return chats.find(c => c.id === currentChatId);
-        }
-
-        function renderChatHistoryList() {
-            chatHistoryList.innerHTML = '';
-            if (chats.length === 0) {
-                chatHistoryList.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO CHATS YET</div>';
-                return;
-            }
-
-            const sortedChats = [...chats].sort((a, b) => b.timestamp - a.timestamp);
-
-            sortedChats.forEach(chat => {
-                const div = document.createElement('div');
-                const isActive = (chat.id === currentChatId);
-                div.className = 'history-item';
-                if (isActive) {
-                    div.style.background = 'rgba(255, 69, 0, 0.1)';
-                    div.style.borderLeft = '4px solid var(--accent-orange)';
-                }
-
-                div.innerHTML = `
-                    <button class="delete-item-btn" title="Delete" onclick="event.stopPropagation(); deleteChat('${chat.id}')">X</button>
-                    <strong>${chat.title}</strong>
-                    <span style="font-size: 0.65rem; color: #666; font-family: 'JetBrains Mono';">${new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                `;
-
-                div.onclick = () => switchChat(chat.id);
-                chatHistoryList.appendChild(div);
-            });
-        }
-
-        function createNewChat() {
-            let chatName = prompt("> ENTER CHAT NAME:", "NEW_SESSION");
-            if (chatName === null) return;
-            chatName = chatName.trim() || "NEW_SESSION";
-
-            currentChatId = generateUUID();
-            let newChat = {
-                id: currentChatId,
-                title: chatName,
-                timestamp: Date.now()
-            };
-            chats.push(newChat);
-            saveChats();
-
-            chatBox.innerHTML = '';
-            if (welcomeState) {
-                welcomeState.style.display = 'flex';
-                chatBox.appendChild(welcomeState);
-            }
-            globalUploadedFiles = [];
-            isReady = false;
-            updateModeBadge();
-            renderModulesLoaded();
-            renderChatHistoryList();
-            queryInput.value = '';
-            queryInput.focus();
-        }
-
-        async function switchChat(chatId) {
-            currentChatId = chatId;
-            chatBox.innerHTML = '';
-            globalUploadedFiles = [];
-            isReady = false;
-            renderChatHistoryList();
+        async function deleteHistoryItem(pairIndex, element) {
+            if (!confirm("PURGE THIS TRACE?")) return;
             
-            await updateStatus();
-            await fetchHistory();
-        }
-
-        async function deleteChat(chatId) {
-            if (!confirm("PURGE THIS CHAT SESSION?")) return;
-            chats = chats.filter(c => c.id !== chatId);
-            saveChats();
-            
-            // Optionally clear history on backend as well
-            fetch(API_BASE_URL + '/clear_history', { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ session_id: chatId })
-            }).catch(e => console.log(e));
-
-            if (currentChatId === chatId) {
-                if (chats.length > 0) {
-                    const sorted = [...chats].sort((a, b) => b.timestamp - a.timestamp);
-                    switchChat(sorted[0].id);
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete_history_item`, { 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ pair_index: pairIndex, session_id: sessionId })
+                });
+                if (response.ok) {
+                    element.style.display = 'none';
+                    setTimeout(() => { fetchHistory(); showToast("TRACE PURGED"); }, 100);
                 } else {
-                    createNewChat();
+                    showToast("PURGE FAILED", true);
                 }
-            } else {
-                renderChatHistoryList();
+            } catch (e) {
+                showToast("NETWORK ERROR", true);
             }
         }
-
-        newChatBtn.addEventListener('click', createNewChat);
 
         async function fetchHistory() {
             try {
-                const response = await fetch(`${API_BASE_URL}/history?session_id=${currentChatId}`);
+                const response = await fetch(`${API_BASE_URL}/history?session_id=${sessionId}`);
                 const data = await response.json();
                 if (data.history) {
+                    historyBox.innerHTML = '';
                     chatBox.innerHTML = '';
                     
                     if (data.history.length > 0) hideWelcome();
-                    else if (welcomeState) {
-                        welcomeState.style.display = 'flex';
-                        chatBox.appendChild(welcomeState);
-                    }
                     
+                    interactionCount = 0;
                     for (let i = 0; i < data.history.length; i += 2) {
                         if (data.history[i] && data.history[i+1]) {
+                            const pairIndex = interactionCount++;
                             const userText = data.history[i].content;
                             const aiText = data.history[i+1].content;
                             
-                            appendMessage('user', userText);
+                            appendHistoryItem(userText, aiText, pairIndex);
+                            appendMessage('user', userText, `msg-pair-${pairIndex}`);
                             appendMessage('ai', aiText);
                         }
                     }
-                    if (data.history.length > 0) {
+                    if (data.history.length === 0) {
+                        historyBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO TRACES IN BUFFER</div>';
+                        if (globalUploadedFiles.length > 0) {
+                            const sysMsg = document.createElement('div');
+                            sysMsg.className = 'mono-font';
+                            sysMsg.style = 'align-self: center; background: var(--black); color: var(--white); padding: 4px 12px; font-size: 0.75rem; border: var(--border-thick); box-shadow: 4px 4px 0px var(--accent-purple);';
+                            sysMsg.textContent = `GLOBAL BUFFER READY`;
+                            chatBox.appendChild(sysMsg);
+                        } else {
+                            if (welcomeState) {
+                                welcomeState.style.display = 'flex';
+                                chatBox.appendChild(welcomeState);
+                            }
+                        }
+                    } else {
                         setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
                     }
                 }
@@ -781,31 +713,28 @@
                 console.log("History fetch failed", e);
             }
         }
-
         
-        function renderModulesLoaded() {
-            libraryBox.innerHTML = '';
-            if (globalUploadedFiles.length > 0) {
-                globalUploadedFiles.forEach(filename => {
-                    const div = document.createElement('div');
-                    div.className = 'library-item';
-                    div.innerHTML = `<span>📄</span><span>${filename}</span>`;
-                    libraryBox.appendChild(div);
-                });
-            } else {
-                libraryBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>';
-            }
-        }
-
         async function updateStatus() {
             try {
-                const response = await fetch(`${API_BASE_URL}/status?session_id=${currentChatId}`);
+                const response = await fetch(`${API_BASE_URL}/status?session_id=${sessionId}`);
                 const data = await response.json();
+                libraryBox.innerHTML = '';
                 
                 globalUploadedFiles = data.uploaded_files || [];
-                isReady = globalUploadedFiles.length > 0;
                 
-                renderModulesLoaded();
+                if (globalUploadedFiles.length > 0) {
+                    isReady = true;
+                    globalUploadedFiles.forEach(filename => {
+                        const div = document.createElement('div');
+                        div.className = 'library-item';
+                        div.innerHTML = `<span>📄</span><span>${filename}</span>`;
+                        libraryBox.appendChild(div);
+                    });
+                } else {
+                    isReady = false;
+                    libraryBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>';
+                }
+                
                 updateModeBadge();
             } catch (e) {
                 console.log("Status update failed", e);
@@ -843,21 +772,13 @@
             try {
                 const formData = new FormData();
                 files.forEach(file => formData.append('files', file));
-                formData.append('session_id', currentChatId);
+                formData.append('session_id', sessionId);
 
                 const response = await fetch(API_BASE_URL + '/upload_multi', { method: 'POST', body: formData });
                 const data = await response.json();
                 
                 if (response.ok) {
                     showToast("INGESTION COMPLETE");
-                    
-                    const chat = getCurrentChat();
-                    if (chat) {
-                        chat.timestamp = Date.now();
-                        saveChats();
-                        renderChatHistoryList();
-                    }
-                    
                     await updateStatus();
                 } else {
                     showToast(data.error || "INGESTION FAILED", true);
@@ -881,7 +802,8 @@
                 return;
             }
 
-            appendMessage('user', text);
+            const pairIndex = interactionCount++;
+            appendMessage('user', text, `msg-pair-${pairIndex}`);
             queryInput.value = '';
             
             const thinkingDiv = document.createElement('div');
@@ -904,16 +826,7 @@
                 
                 if (response.ok) {
                     appendMessage('ai', data.answer, null, data.sources || null);
-                    
-                    const chat = getCurrentChat();
-                    if (chat) {
-                        if (chat.title === "NEW_SESSION") {
-                            chat.title = text.substring(0, 30) + (text.length > 30 ? "..." : "");
-                        }
-                        chat.timestamp = Date.now();
-                        saveChats();
-                        renderChatHistoryList();
-                    }
+                    appendHistoryItem(text, data.answer, pairIndex); 
                 } else {
                     appendMessage('ai', "ERR: " + (data.error || "GENERATION FAILED"));
                 }
@@ -952,11 +865,11 @@
 
         // Initialize
         window.addEventListener('load', async () => {
-            if (chats.length > 0) {
-                const sorted = [...chats].sort((a, b) => b.timestamp - a.timestamp);
-                await switchChat(sorted[0].id);
-            } else {
-                createNewChat();
+            try {
+                await updateStatus();
+                await fetchHistory();
+            } catch (e) {
+                console.log("Status check failed", e);
             }
         });
     </script>
