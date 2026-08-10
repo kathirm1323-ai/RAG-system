@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,9 @@
     <meta name="description" content="Brutalist RAG System">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@500;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-paper: #F4F0EB;
@@ -16,11 +19,11 @@
             --accent-orange: #FF4500;
             --accent-purple: #7B61FF;
             --accent-cyan: #00E5FF;
-            
+
             --border-thick: 3px solid var(--black);
             --shadow-hard: 6px 6px 0px var(--black);
             --shadow-hard-hover: 2px 2px 0px var(--black);
-            --shadow-inset: inset 4px 4px 0px rgba(0,0,0,0.1);
+            --shadow-inset: inset 4px 4px 0px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -31,7 +34,7 @@
 
         /* Dot Grid Background */
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: var(--bg-paper);
             color: var(--black);
             height: 100vh;
@@ -42,8 +45,17 @@
         }
 
         /* Typography */
-        h1, h2, h3, .display-font { font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        h1,
+        h2,
+        h3,
+        .display-font {
+            font-family: 'Poppins', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .mono-font {
+            font-family: 'Poppins', sans-serif;
+        }
 
         /* Structural Layout */
         .app-container {
@@ -81,9 +93,9 @@
         }
 
         .brand-header p {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.75rem;
-            font-weight: 800;
+            font-weight: 700;
             margin-top: 0.5rem;
         }
 
@@ -91,7 +103,7 @@
             padding: 0.75rem 1rem;
             background: var(--black);
             color: var(--white);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-weight: 700;
             font-size: 0.85rem;
             text-transform: uppercase;
@@ -99,6 +111,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border: var(--border-thick);
         }
 
         /* Upload Zone */
@@ -118,13 +131,14 @@
             position: relative;
         }
 
-        .upload-area:hover, .upload-area.dragover {
+        .upload-area:hover,
+        .upload-area.dragover {
             background: var(--accent-cyan);
             border-style: solid;
             transform: translate(-2px, -2px);
             box-shadow: 4px 4px 0px var(--black);
         }
-        
+
         .upload-area:active {
             transform: translate(0, 0);
             box-shadow: 0px 0px 0px var(--black);
@@ -137,7 +151,9 @@
             font-weight: 800;
         }
 
-        input[type="file"] { display: none; }
+        input[type="file"] {
+            display: none;
+        }
 
         /* Library / History Lists */
         .list-container {
@@ -146,36 +162,57 @@
             background: var(--white);
             border-bottom: var(--border-thick);
         }
-        
+
         /* Custom Blocky Scrollbar */
-        ::-webkit-scrollbar { width: 12px; border-left: var(--border-thick); background: var(--bg-paper); }
-        ::-webkit-scrollbar-thumb { background: var(--black); border: 2px solid var(--bg-paper); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+        ::-webkit-scrollbar {
+            width: 12px;
+            border-left: var(--border-thick);
+            background: var(--bg-paper);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--black);
+            border: 2px solid var(--bg-paper);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-orange);
+        }
 
         .library-item {
             padding: 0.85rem 1rem;
-            border-bottom: var(--border-thick);
-            font-family: 'JetBrains Mono', monospace;
+            border: var(--border-thick);
+            border-top: none;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 10px;
             background: var(--white);
         }
-        .library-item:hover { background: var(--bg-paper); }
+
+        .library-item:hover {
+            background: var(--bg-paper);
+        }
 
         .history-item {
             padding: 1rem;
-            border-bottom: 2px solid var(--black);
+            border: var(--border-thick);
+            border-top: none;
             font-size: 0.85rem;
+            font-family: 'Poppins', sans-serif;
             cursor: pointer;
             position: relative;
         }
-        .history-item:hover { background: rgba(0,0,0,0.05); }
-        
+
+        .history-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
         .history-item strong {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
             color: var(--accent-purple);
             display: block;
             margin-bottom: 4px;
@@ -195,7 +232,7 @@
             background: var(--accent-purple);
             color: var(--white);
             border: var(--border-thick);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-weight: 700;
             text-transform: uppercase;
             padding: 4px 12px;
@@ -203,25 +240,42 @@
             box-shadow: 3px 3px 0px var(--black);
             transition: all 0.1s ease;
         }
-        .brutal-btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--black); }
-        .brutal-btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--black); }
-        
+
+        .brutal-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0px var(--black);
+        }
+
+        .brutal-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px var(--black);
+        }
+
         .delete-item-btn {
             position: absolute;
-            top: 8px; right: 8px;
+            top: 8px;
+            right: 8px;
             background: var(--accent-orange);
             color: var(--black);
-            border: 2px solid var(--black);
-            font-family: 'JetBrains Mono', monospace;
+            border: var(--border-thick);
+            font-family: 'Poppins', sans-serif;
             font-weight: 800;
-            width: 24px; height: 24px;
+            width: 24px;
+            height: 24px;
             cursor: pointer;
             box-shadow: 2px 2px 0px var(--black);
             opacity: 0;
             transition: all 0.1s;
         }
-        .history-item:hover .delete-item-btn { opacity: 1; }
-        .delete-item-btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px; }
+
+        .history-item:hover .delete-item-btn {
+            opacity: 1;
+        }
+
+        .delete-item-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px;
+        }
 
         /* ------------------- MAIN CHAT AREA ------------------- */
         .chat-area {
@@ -242,8 +296,8 @@
         }
 
         .mode-badge {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 800;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
             font-size: 0.85rem;
             background: var(--accent-cyan);
             border: var(--border-thick);
@@ -255,21 +309,28 @@
             display: none;
             padding: 0.75rem 1rem;
             background: var(--white);
-            border-bottom: var(--border-thick);
-            font-family: 'JetBrains Mono', monospace;
+            border: var(--border-thick);
+            border-top: none;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 600;
             flex-wrap: wrap;
             gap: 6px;
             align-items: center;
         }
-        .active-files-badge.show { display: flex; }
+
+        .active-files-badge.show {
+            display: flex;
+        }
+
         .file-tag {
             background: var(--accent-purple);
             color: var(--white);
             padding: 2px 8px;
-            border: 2px solid var(--black);
+            border: var(--border-thick);
             display: inline-block;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
         }
 
         .chat-container {
@@ -286,6 +347,7 @@
             max-width: 80%;
             padding: 1.25rem;
             border: var(--border-thick);
+            font-family: 'Poppins', sans-serif;
             font-size: 0.95rem;
             line-height: 1.6;
             position: relative;
@@ -293,8 +355,15 @@
         }
 
         @keyframes popIn {
-            0% { transform: scale(0.95) translateY(20px); opacity: 0; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+            0% {
+                transform: scale(0.95) translateY(20px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
         }
 
         .msg-user {
@@ -316,11 +385,12 @@
         .msg-ai::before {
             content: "SYSTEM";
             position: absolute;
-            top: -14px; left: -3px;
+            top: -14px;
+            left: -3px;
             background: var(--accent-orange);
             color: var(--black);
             border: var(--border-thick);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Poppins', sans-serif;
             font-weight: 800;
             font-size: 0.7rem;
             padding: 2px 8px;
@@ -335,12 +405,13 @@
             gap: 8px;
             flex-wrap: wrap;
         }
+
         .source-tag {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.7rem;
-            font-weight: 800;
+            font-weight: 700;
             background: var(--accent-cyan);
-            border: 2px solid var(--black);
+            border: var(--border-thick);
             padding: 2px 8px;
             box-shadow: 2px 2px 0px var(--black);
         }
@@ -362,12 +433,13 @@
             background: var(--bg-paper);
             border: var(--border-thick);
             padding: 1rem;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 1rem;
             font-weight: 500;
             outline: none;
-            box-shadow: inset 4px 4px 0px rgba(0,0,0,0.05);
+            box-shadow: inset 4px 4px 0px rgba(0, 0, 0, 0.05);
         }
+
         input[type="text"]:focus {
             background: #fff;
             border-color: var(--accent-purple);
@@ -377,7 +449,7 @@
             background: var(--accent-orange);
             color: var(--black);
             border: var(--border-thick);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 1.25rem;
             font-weight: 900;
             padding: 0 2rem;
@@ -385,14 +457,17 @@
             box-shadow: var(--shadow-hard);
             transition: all 0.1s ease;
         }
+
         button.send-btn:hover:not(:disabled) {
             transform: translate(-2px, -2px);
             box-shadow: 8px 8px 0px var(--black);
         }
+
         button.send-btn:active:not(:disabled) {
             transform: translate(6px, 6px);
             box-shadow: 0px 0px 0px var(--black);
         }
+
         button.send-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
@@ -409,6 +484,7 @@
             flex: 1;
             text-align: center;
         }
+
         .welcome-state h2 {
             font-size: 3rem;
             background: var(--black);
@@ -419,9 +495,10 @@
             box-shadow: 6px 6px 0px var(--accent-orange);
             border: var(--border-thick);
         }
+
         .welcome-state p {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
             background: var(--white);
             border: var(--border-thick);
             padding: 1rem;
@@ -431,45 +508,79 @@
         /* Loaders & Toasts */
         .loader {
             display: none;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Poppins', sans-serif;
             font-weight: 800;
             font-size: 1.2rem;
             color: var(--accent-purple);
             animation: blink 1s step-end infinite;
         }
-        @keyframes blink { 50% { opacity: 0; } }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
 
         .toast {
             position: fixed;
-            top: 20px; right: 20px;
+            top: 20px;
+            right: 20px;
             background: var(--accent-cyan);
             border: var(--border-thick);
             color: var(--black);
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 800;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
             padding: 1rem 1.5rem;
             box-shadow: var(--shadow-hard);
             transform: translateX(150%);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 100;
         }
-        .toast.error { background: var(--accent-orange); color: var(--white); }
-        .toast.show { transform: translateX(0); }
+
+        .toast.error {
+            background: var(--accent-orange);
+            color: var(--white);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
 
         /* Highlight Flash */
         @keyframes flashHighlight {
-            0% { background: var(--accent-cyan); transform: scale(1.02); }
-            100% { background: var(--white); transform: scale(1); }
+            0% {
+                background: var(--accent-cyan);
+                transform: scale(1.02);
+            }
+
+            100% {
+                background: var(--white);
+                transform: scale(1);
+            }
         }
-        .highlight-flash { animation: flashHighlight 1s ease-out; }
-        
+
+        .highlight-flash {
+            animation: flashHighlight 1s ease-out;
+        }
+
         /* Mobile */
         @media (max-width: 900px) {
-            .app-container { grid-template-columns: 1fr; margin: 0; border: none; box-shadow: none; }
-            .sidebar { border-right: none; border-bottom: var(--border-thick); max-height: 40vh; }
+            .app-container {
+                grid-template-columns: 1fr;
+                margin: 0;
+                border: none;
+                box-shadow: none;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: var(--border-thick);
+                max-height: 40vh;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div class="app-container">
@@ -482,7 +593,8 @@
             <div class="upload-wrapper">
                 <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
                     <div class="upload-icon">[ + ]</div>
-                    <div id="upload-text" class="mono-font" style="font-weight: 700; font-size: 0.85rem;">LOAD CONTEXT FILES</div>
+                    <div id="upload-text" class="mono-font" style="font-weight: 700; font-size: 0.85rem;">LOAD CONTEXT
+                        FILES</div>
                     <div class="mono-font" style="font-size: 0.65rem; margin-top: 5px;">PDF / TXT / DOCX</div>
                     <div class="loader" id="upload-loader">[ █ ]</div>
                 </div>
@@ -493,7 +605,8 @@
                 <span>Modules Loaded</span>
             </div>
             <div class="list-container" id="library-box">
-                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>
+                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO
+                    MODULES DETECTED</div>
             </div>
 
             <div class="section-header" style="display: none;">
@@ -501,7 +614,8 @@
                 <button id="clear-btn" class="brutal-btn" style="font-size:0.65rem; padding: 2px 6px;">PURGE</button>
             </div>
             <div class="list-container" id="history-box" style="border-bottom:none; display: none;">
-                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO TRACES IN BUFFER</div>
+                <div style="padding: 1rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; text-align: center;">NO
+                    TRACES IN BUFFER</div>
             </div>
         </aside>
 
@@ -521,7 +635,7 @@
                     <p>> LOAD FILES TO BEGIN RAG ANALYSIS</p>
                 </div>
             </div>
-            
+
             <div class="input-wrapper">
                 <div class="input-group">
                     <input type="text" id="query-input" placeholder="> ENTER QUERY..." autocomplete="off">
@@ -538,14 +652,16 @@
         // CONFIGURATION: Set this to your Hugging Face Space URL
         // Example: 'https://your-username-rag-backend.hf.space'
         // ============================================================
-        const API_BASE_URL = 'https://rag-system-ai.onrender.com';
+        const API_BASE_URL = (window.location.origin && window.location.origin !== 'null' && !window.location.protocol.startsWith('file'))
+            ? window.location.origin
+            : 'http://127.0.0.1:5000';
 
         // DOM Elements
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const uploadText = document.getElementById('upload-text');
         const uploadLoader = document.getElementById('upload-loader');
-        
+
         const chatBox = document.getElementById('chat-box');
         const queryInput = document.getElementById('query-input');
         const sendBtn = document.getElementById('send-btn');
@@ -561,7 +677,7 @@
         let globalUploadedFiles = [];
 
         // UI Helpers
-        function showToast(msg, isError=false) {
+        function showToast(msg, isError = false) {
             toast.textContent = msg;
             toast.className = `toast show ${isError ? 'error' : ''}`;
             setTimeout(() => toast.className = 'toast', 4000);
@@ -576,7 +692,7 @@
                 modeBadge.textContent = `GLOBAL_RAG_MODE [${globalUploadedFiles.length}]`;
                 modeBadge.style.background = 'var(--accent-purple)';
                 modeBadge.style.color = 'var(--white)';
-                
+
                 // Show active files badge
                 let tagsHtml = '<strong>ACTIVE_SOURCES: </strong>';
                 globalUploadedFiles.forEach(f => {
@@ -584,7 +700,7 @@
                 });
                 activeFilesBadge.innerHTML = tagsHtml;
                 activeFilesBadge.classList.add('show');
-                
+
                 queryInput.placeholder = `> TARGETING ${globalUploadedFiles.length} FILES...`;
             } else {
                 modeBadge.textContent = 'IDLE_MODE';
@@ -600,9 +716,9 @@
             const div = document.createElement('div');
             div.className = `message ${sender === 'user' ? 'msg-user' : 'msg-ai'}`;
             if (id) div.id = id;
-            
+
             let html = text.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-            
+
             div.innerHTML = html;
             chatBox.appendChild(div);
             setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 50);
@@ -612,7 +728,7 @@
         function appendHistoryItem(query, snippet, index) {
             const placeholder = historyBox.querySelector('div[style*="text-align: center"]');
             if (placeholder) historyBox.innerHTML = '';
-            
+
             const div = document.createElement('div');
             div.className = 'history-item';
             div.setAttribute('data-index', index);
@@ -623,7 +739,7 @@
                     <span class="mono-font" style="font-size:0.75rem;">${snippet}</span>
                 </div>
             `;
-            
+
             div.onclick = () => {
                 const targetId = `msg-pair-${index}`;
                 const targetElement = document.getElementById(targetId);
@@ -637,17 +753,17 @@
                     showToast("TRACE NOT IN BUFFER", true);
                 }
             };
-            
+
             historyBox.insertBefore(div, historyBox.firstChild);
         }
 
         async function deleteHistoryItem(pairIndex, element) {
             if (!confirm("PURGE THIS TRACE?")) return;
-            
+
             try {
-                const response = await fetch(`${API_BASE_URL}/delete_history_item`, { 
+                const response = await fetch(`${API_BASE_URL}/delete_history_item`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pair_index: pairIndex })
                 });
                 if (response.ok) {
@@ -668,16 +784,16 @@
                 if (data.history) {
                     historyBox.innerHTML = '';
                     chatBox.innerHTML = '';
-                    
+
                     if (data.history.length > 0) hideWelcome();
-                    
+
                     interactionCount = 0;
                     for (let i = 0; i < data.history.length; i += 2) {
-                        if (data.history[i] && data.history[i+1]) {
+                        if (data.history[i] && data.history[i + 1]) {
                             const pairIndex = interactionCount++;
                             const userText = data.history[i].content;
-                            const aiText = data.history[i+1].content;
-                            
+                            const aiText = data.history[i + 1].content;
+
                             appendHistoryItem(userText, aiText, pairIndex);
                             appendMessage('user', userText, `msg-pair-${pairIndex}`);
                             appendMessage('ai', aiText);
@@ -701,19 +817,19 @@
                         setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.log("History fetch failed", e);
             }
         }
-        
+
         async function updateStatus() {
             try {
                 const response = await fetch(API_BASE_URL + '/status');
                 const data = await response.json();
                 libraryBox.innerHTML = '';
-                
+
                 globalUploadedFiles = data.uploaded_files || [];
-                
+
                 if (globalUploadedFiles.length > 0) {
                     isReady = true;
                     globalUploadedFiles.forEach(filename => {
@@ -726,7 +842,7 @@
                     isReady = false;
                     libraryBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">NO MODULES DETECTED</div>';
                 }
-                
+
                 updateModeBadge();
             } catch (e) {
                 console.log("Status update failed", e);
@@ -769,17 +885,17 @@
                 let data = {};
                 try {
                     data = await response.json();
-                } catch(jsonErr) {
+                } catch (jsonErr) {
                     console.error("Failed to parse upload response JSON:", jsonErr);
                 }
-                
+
                 if (response.ok) {
                     showToast("INGESTION COMPLETE");
                     await updateStatus();
                 } else {
                     showToast(data.error || `INGESTION FAILED (Status: ${response.status})`, true);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Upload network error details:", e);
                 showToast("NETWORK ERROR", true);
             } finally {
@@ -802,7 +918,7 @@
             const pairIndex = interactionCount++;
             appendMessage('user', text, `msg-pair-${pairIndex}`);
             queryInput.value = '';
-            
+
             const thinkingDiv = document.createElement('div');
             thinkingDiv.className = 'message msg-ai';
             thinkingDiv.id = 'thinking-msg';
@@ -813,26 +929,26 @@
             try {
                 const response = await fetch(API_BASE_URL + '/ask', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: text })
                 });
                 let data = {};
                 try {
                     data = await response.json();
-                } catch(jsonErr) {
+                } catch (jsonErr) {
                     console.error("Failed to parse ask response JSON:", jsonErr);
                 }
-                
+
                 const th = document.getElementById('thinking-msg');
                 if (th) th.remove();
-                
+
                 if (response.ok) {
                     appendMessage('ai', data.answer, null, data.sources || null);
-                    appendHistoryItem(text, data.answer, pairIndex); 
+                    appendHistoryItem(text, data.answer, pairIndex);
                 } else {
                     appendMessage('ai', "ERR: " + (data.error || `GENERATION FAILED (Status: ${response.status})`));
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Ask network error details:", e);
                 const th = document.getElementById('thinking-msg');
                 if (th) th.remove();
@@ -856,7 +972,7 @@
                         chatBox.appendChild(welcomeState);
                     }
                     showToast("BUFFER CLEARED");
-                } catch(e) {
+                } catch (e) {
                     showToast("PURGE FAILED", true);
                 }
             });
@@ -873,4 +989,5 @@
         });
     </script>
 </body>
+
 </html>
