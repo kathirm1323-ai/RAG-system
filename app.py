@@ -361,22 +361,28 @@ def upload_multi():
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    req = request.get_json()
-    query = req.get('question')
+    try:
+        req = request.get_json()
+        query = req.get('question')
 
-    if not query:
-        return jsonify({"error": "No question provided"}), 400
+        if not query:
+            return jsonify({"error": "No question provided"}), 400
 
-    # Search global knowledge base
-    relevant_chunks = global_kb.db.search(query, top_k=5)
-    answer = generate_answer(query, relevant_chunks, global_kb.history)
+        # Search global knowledge base
+        relevant_chunks = global_kb.db.search(query, top_k=5)
+        answer = generate_answer(query, relevant_chunks, global_kb.history)
 
-    global_kb.history.append({"role": "user", "content": query})
-    global_kb.history.append({"role": "assistant", "content": answer})
+        global_kb.history.append({"role": "user", "content": query})
+        global_kb.history.append({"role": "assistant", "content": answer})
 
-    # Include source info in response
-    sources_used = list(set(chunk["source_file"] for chunk in relevant_chunks)) if relevant_chunks else []
-    return jsonify({"answer": answer, "sources": sources_used})
+        # Include source info in response
+        sources_used = list(set(chunk["source_file"] for chunk in relevant_chunks)) if relevant_chunks else []
+        return jsonify({"answer": answer, "sources": sources_used})
+    except Exception as e:
+        import traceback
+        print("ERROR in /ask:")
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 @app.route('/history', methods=['GET'])
