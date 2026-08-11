@@ -8,15 +8,14 @@ A **Retrieval-Augmented Generation (RAG)** system that allows users to upload PD
 
 ---
 
-## 🛠️ Technical Stack
+### 🛠️ Tech Stack
 
-⚡ **Backend:** FastAPI
-🐍 **Language:** Python
-📄 **PDF Processing:** PyPDF / pdfplumber
-🧠 **Embedding Model:** SentenceTransformers
-🔍 **Retrieval:** Semantic Search
-🤖 **LLM:** Groq API
-🌐 **Frontend:** HTML, CSS, JavaScript
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-LLM_API-orange?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-Retrieval_Augmented_Generation-purple?style=for-the-badge)
+![Sentence Transformers](https://img.shields.io/badge/SentenceTransformers-Embeddings-yellow?style=for-the-badge)
+
 
 ---
 
