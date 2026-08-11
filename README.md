@@ -4,7 +4,7 @@
 
 A **Retrieval-Augmented Generation (RAG)** system that allows users to upload PDF documents and ask questions based on the document content. The system retrieves the most relevant information from the PDF and uses an LLM to generate accurate, context-based answers.
 
-🌐 **Live Demo:** [Try the RAG System](YOUR_LIVE_LINK_HERE)
+🌐 **Live Demo:** [Try the RAG System](https://rag-system-ai.onrender.com)
 
 ---
 
