@@ -224,6 +224,41 @@ def split_text_into_chunks(text, chunk_size=300, overlap=50):
 # =====================================================================
 # Answer generation
 # =====================================================================
+def is_personal_conversation(query):
+    """Recognize only direct greetings or identity questions, never word fragments."""
+    normalized_query = " ".join(tokenize(query))
+    direct_greetings = {
+        "hello", "hi", "hey", "greetings", "helo", "heyo",
+        "how are you", "what s up"
+    }
+    return (
+        normalized_query in direct_greetings
+        or normalized_query == "who am i"
+        or normalized_query == "what is my name"
+        or normalized_query.startswith("my name is ")
+    )
+
+
+def generate_local_fallback(context):
+    """Return a useful extract when the external LLM service is unavailable."""
+    if not context:
+        return "Please upload some documents first."
+
+    sources = []
+    sentences = []
+    for chunk in context:
+        source = chunk.get("source_file", "the uploaded document")
+        if source not in sources:
+            sources.append(source)
+        sentences.extend(re.split(r"(?<=[.!?])\s+", chunk.get("text", "")))
+
+    summary = " ".join(sentence.strip() for sentence in sentences[:3] if sentence.strip())
+    if not summary:
+        summary = "I found the document, but could not extract readable text from the relevant section."
+
+    return f"Based on {', '.join(sources)}: {summary}"
+
+
 def generate_answer(query, context, history):
     # Build context text with source annotations
     has_context = False
@@ -243,12 +278,8 @@ def generate_answer(query, context, history):
     for msg in history[-10:]:
         history_text += f"{msg['role'].capitalize()}: {msg['content']}\n"
 
-    # Enhanced greeting and identity detection
-    greetings = ["hello", "hi", "hey", "greetings", "helo", "heyo", "how are you", "what's up"]
-    lower_query = query.lower()
-
-    # If it's a pure greeting/identity request without context
-    if not has_context and (any(g in lower_query for g in greetings) or "my name" in lower_query or "who am i" in lower_query):
+    # Handle direct greetings and identity questions separately from document requests.
+    if is_personal_conversation(query):
         prompt = f"""You are the RAG Executive AI. 
 1. The user may be introducing themselves or asking about their identity.
 2. Review the Past Conversation carefully. **PRIORITIZE the most recent name** shared by the user in the latest messages.
@@ -265,27 +296,22 @@ Answer:"""
         prompt = f"""You are a professional assistant analyzing documents.
 
 INSTRUCTIONS:
-1. Use the given Context below to answer the Question. Each context chunk is labeled with [Source: filename].
-2. When your answer draws information from the documents, mention which file it came from (e.g., "According to filename.pdf...").
+1. Understand the user's plain-English request and answer it using the given Context. Each context chunk is labeled with [Source: filename].
+2. If the user asks to explain, summarize, describe, or give an overview of a document, provide a clear high-level summary of its content.
 3. If the answer only comes from one file, that's fine — do NOT force content from both files.
 4. If the context does not contain the answer, say "I cannot find information about this in the uploaded documents."
-5. Also check the Past Conversation for personal details like the user's name. **Always use the most recent name shared.**
-6. Keep answers concise and professional.
+5. Do not discuss the user's name or identity unless the question directly asks about name or identity.
+6. Keep answers concise, professional, and easy to understand.
 
 Context:
 {context_text}
-
-Past Conversation:
-{history_text}
 
 Question: {query}
 Answer:"""
     else:
         prompt = f"""You are a professional assistant. 
-1. Use the given Context below to answer the Question.
-2. Also check the Past Conversation for personal details.
-3. If the context is empty and the question isn't about the user's identity, say "Please upload some documents first."
-4. Keep answers concise and professional.
+1. If the context is empty, say "Please upload some documents first."
+2. Keep answers concise and professional.
     
 Context:
 (No context available for this module yet)
@@ -298,13 +324,18 @@ Answer:"""
 
     print(f"DEBUG: Generating answer for query: '{query}'")
     
-    client = get_llm_client()
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1
-    )
-    answer = response.choices[0].message.content
+    try:
+        client = get_llm_client()
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
+        )
+        answer = response.choices[0].message.content
+    except Exception as error:
+        print(f"WARNING: Groq generation failed; using local fallback: {error}")
+        answer = generate_local_fallback(context)
+
     print(f"DEBUG: LLM Response: '{answer}'")
     return answer
 
