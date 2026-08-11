@@ -76,6 +76,8 @@ class ChromaVectorDB:
         """Recalculate IDF for all terms in the vocabulary."""
         N = len(self.documents)
         if N == 0:
+            self.idf = {}
+            self.vocab = set()
             return
         
         df = Counter()
@@ -88,6 +90,16 @@ class ChromaVectorDB:
         self.idf = {}
         for term, freq in df.items():
             self.idf[term] = math.log(1 + (N - freq + 0.5) / (freq + 0.5)) + 1
+
+    def remove_source(self, source_file):
+        """Remove every indexed chunk belonging to a document."""
+        original_count = len(self.documents)
+        self.documents = [
+            doc for doc in self.documents
+            if doc["source_file"] != source_file
+        ]
+        self._update_idf()
+        return original_count - len(self.documents)
 
     def search(self, query, top_k=5):
         """Search across all chunks using BM25 relevance scoring."""
@@ -145,6 +157,15 @@ class GlobalKnowledgeBase:
 
     def clear_history(self):
         self.history = []
+
+    def remove_file(self, filename):
+        removed_chunks = self.db.remove_source(filename)
+        self.uploaded_files = [
+            uploaded_file for uploaded_file in self.uploaded_files
+            if uploaded_file != filename
+        ]
+        self.clear_history()
+        return removed_chunks
 
 global_kb = GlobalKnowledgeBase()
 
@@ -407,6 +428,25 @@ def delete_history_item():
 def clear_history_route():
     global_kb.clear_history()
     return jsonify({"status": "success"})
+
+
+@app.route('/delete_file', methods=['POST'])
+def delete_file():
+    req = request.get_json() or {}
+    filename = secure_filename(req.get('filename', ''))
+
+    if not filename:
+        return jsonify({"error": "No filename provided"}), 400
+    if filename not in global_kb.uploaded_files:
+        return jsonify({"error": "File not found"}), 404
+
+    removed_chunks = global_kb.remove_file(filename)
+    return jsonify({
+        "status": "success",
+        "removed_file": filename,
+        "removed_chunks": removed_chunks,
+        "history_cleared": True
+    })
 
 
 @app.route('/status', methods=['GET'])

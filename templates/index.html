@@ -165,6 +165,52 @@
         }
         .library-item:hover { background: var(--bg-paper); }
 
+        .file-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .document-delete-btn {
+            flex: 0 0 44px;
+            width: 44px;
+            height: 44px;
+            margin-left: auto;
+            display: grid;
+            place-items: center;
+            background: var(--accent-orange);
+            color: var(--black);
+            border: 2px solid var(--black);
+            box-shadow: 2px 2px 0 var(--black);
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .document-delete-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 var(--black);
+        }
+
+        .document-delete-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0 0 0 var(--black);
+        }
+
+        .document-delete-btn:focus-visible {
+            outline: 3px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
+        .document-delete-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            fill: none;
+        }
+
         .history-item {
             padding: 1rem;
             border-bottom: 2px solid var(--black);
@@ -762,7 +808,19 @@
                     globalUploadedFiles.forEach(filename => {
                         const div = document.createElement('div');
                         div.className = 'library-item';
-                        div.innerHTML = `<span>📄</span><span>${filename}</span>`;
+                        const fileLabel = document.createElement('span');
+                        fileLabel.className = 'file-name';
+                        fileLabel.textContent = filename;
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.className = 'document-delete-btn';
+                        deleteButton.type = 'button';
+                        deleteButton.title = `Remove ${filename} and clear this chat`;
+                        deleteButton.setAttribute('aria-label', `Remove ${filename} and clear this chat`);
+                        deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M9 7l1-3h4l1 3M6 7l1 13h10l1-13"/></svg>';
+                        deleteButton.addEventListener('click', () => removeDocument(filename));
+
+                        div.append(fileLabel, deleteButton);
                         libraryBox.appendChild(div);
                     });
                 } else {
@@ -773,6 +831,30 @@
                 updateModeBadge();
             } catch (e) {
                 console.log("Status update failed", e);
+            }
+        }
+
+        async function removeDocument(filename) {
+            if (!confirm(`REMOVE ${filename}?\n\nThis will also clear the current chat.`)) return;
+
+            try {
+                const response = await fetch(API_BASE_URL + '/delete_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ filename, session_id: sessionId })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showToast(data.error || 'DOCUMENT REMOVAL FAILED', true);
+                    return;
+                }
+
+                await updateStatus();
+                await fetchHistory();
+                showToast('DOCUMENT REMOVED / CHAT CLEARED');
+            } catch (e) {
+                showToast('NETWORK ERROR', true);
             }
         }
 
