@@ -305,6 +305,38 @@
             box-shadow: 3px 3px 0px var(--black);
         }
 
+        .clear-chat-btn {
+            min-height: 44px;
+            padding: 0.5rem 1rem;
+            background: var(--accent-orange);
+            color: var(--black);
+            border: var(--border-thick);
+            box-shadow: 3px 3px 0px var(--black);
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .clear-chat-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0px var(--black);
+        }
+
+        .clear-chat-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0 0 0 var(--black);
+        }
+
+        .clear-chat-btn:focus-visible {
+            outline: 3px solid var(--accent-cyan);
+            outline-offset: 3px;
+        }
+
         .active-files-badge {
             display: none;
             padding: 0.75rem 1rem;
@@ -623,6 +655,7 @@
         <main class="chat-area">
             <div class="chat-header">
                 <span class="mode-badge" id="mode-badge">IDLE_MODE</span>
+                <button class="clear-chat-btn" id="clear-chat-btn" type="button" title="Clear this chat's history">CLEAR CHAT</button>
             </div>
 
             <div class="active-files-badge" id="active-files-badge">
@@ -959,11 +992,15 @@
         sendBtn.addEventListener('click', sendMessage);
         queryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        const clearBtn = document.getElementById('clear-btn');
-        if (clearBtn) {
+        const clearButtons = document.querySelectorAll('#clear-btn, #clear-chat-btn');
+        clearButtons.forEach((clearBtn) => {
             clearBtn.addEventListener('click', async () => {
                 try {
-                    await fetch(API_BASE_URL + '/clear_history', { method: 'POST' });
+                    await fetch(API_BASE_URL + '/clear_history', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ session_id: sessionId })
+                    });
                     historyBox.innerHTML = '<div style="padding: 1rem; font-family: \'JetBrains Mono\'; font-size: 0.75rem; text-align: center;">TRACE PURGED</div>';
                     interactionCount = 0;
                     chatBox.innerHTML = '';
@@ -976,7 +1013,7 @@
                     showToast("PURGE FAILED", true);
                 }
             });
-        }
+        });
 
         // Initialize
         window.addEventListener('load', async () => {
